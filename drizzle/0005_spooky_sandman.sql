@@ -1,0 +1,1 @@
+ALTER TABLE "news_article" ADD COLUMN "status" text DEFAULT 'draft' NOT NULL;

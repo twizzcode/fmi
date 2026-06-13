@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
@@ -25,11 +23,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={cn("h-full scroll-smooth", "font-sans", geist.variable)}>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
-        <div className="relative flex min-h-screen flex-col">
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </div>
+        {children}
       </body>
     </html>
   );

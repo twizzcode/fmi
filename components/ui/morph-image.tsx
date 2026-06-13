@@ -25,6 +25,8 @@ const MorphImage: React.FC<React.ComponentProps<typeof motion.img>> = ({
     ...props
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const layoutId =
+        typeof props.layoutId === "string" ? props.layoutId : "morph-image";
 
     const imageRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +49,7 @@ const MorphImage: React.FC<React.ComponentProps<typeof motion.img>> = ({
         <motion.img
             src={src}
             alt={alt}
-            layoutId="morph-image"
+            layoutId={layoutId}
             className={cn(
                 "w-full h-full object-cover object-center not-prose cursor-zoom-in",
                 className,
@@ -82,7 +84,7 @@ const MorphImage: React.FC<React.ComponentProps<typeof motion.img>> = ({
                             ref={imageRef as React.RefObject<HTMLImageElement>}
                             src={src}
                             alt={alt}
-                            layoutId={props.layoutId || "morph-image"}
+                            layoutId={layoutId}
                             className={cn(
                                 "object-cover object-center max-w-[90vw] max-h-[90vh] pointer-events-auto cursor-zoom-out rounded-lg overflow-hidden",
                             )}

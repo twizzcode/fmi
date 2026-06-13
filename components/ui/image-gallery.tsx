@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type React from "react";
 
 import MorphImage from "@/components/ui/morph-image";
@@ -59,6 +59,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 }) => {
     const [containerWidth, setContainerWidth] = useState(0);
     const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+    const galleryId = useId();
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -255,7 +256,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                 src={item.src}
                                 alt={item.alt}
                                 className="w-full h-full"
-                                layoutId={`image-gallery-${index}`}
+                                layoutId={`image-gallery-${galleryId}-${index}`}
                                 onClick={() => handleImageClick(item, index)}
                             />
                         ) : null}

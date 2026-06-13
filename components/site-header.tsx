@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ChevronDown, LogIn, Menu, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogIn, LogOut, Menu, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { adminOrigin } from "@/lib/app-config";
+import { authClient } from "@/lib/auth-client";
 
 const navItems = [
   { href: "/", label: "Beranda" },
@@ -26,13 +28,39 @@ const aboutItems = [
   { href: "/tentang-ldj", label: "Tentang LDJ" },
 ];
 
-const mockUser: { name: string; initials: string; email: string } | null = null;
-
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
   const isAboutActive = aboutItems.some((item) => item.href === pathname);
+  const user = session?.user;
+  const userName = user?.name?.trim() || "Pengguna FMI";
+  const userEmail = user?.email || "";
+  const userRole = user?.role;
+  const canAccessDashboard =
+    userRole === "admin" || userRole === "developer";
+  const userInitials = userName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+
+    try {
+      await authClient.signOut();
+      setOpen(false);
+      router.push("/");
+      router.refresh();
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
@@ -138,10 +166,18 @@ export function SiteHeader() {
               ))}
           </nav>
 
-          {mockUser ? (
+          {!isPending && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50">
-                {mockUser.initials}
+                {user.image ? (
+                  <img
+                    src={user.image}
+                    alt={userName}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  userInitials
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
@@ -150,19 +186,39 @@ export function SiteHeader() {
               >
                 <div className="px-3 py-2">
                   <p className="text-sm font-semibold text-slate-900">
-                    {mockUser.name}
+                    {userName}
                   </p>
-                  <p className="text-xs text-slate-500">{mockUser.email}</p>
+                  <p className="text-xs text-slate-500">{userEmail}</p>
                 </div>
+                {canAccessDashboard ? (
+                  <>
+                    <DropdownMenuSeparator className="bg-slate-100" />
+                    <DropdownMenuItem
+                      asChild
+                      className="rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <Link href={adminOrigin} className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
                 <DropdownMenuSeparator className="bg-slate-100" />
-                <DropdownMenuItem className="rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900">
-                  Logout
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="rounded-xl px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  <div className="flex items-center gap-2">
+                    <LogOut className="h-4 w-4" />
+                    <span>{isSigningOut ? "Keluar..." : "Logout"}</span>
+                  </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Link
-              href="#"
+              href="/login"
               aria-label="Pintu Masuk"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
             >
@@ -258,29 +314,50 @@ export function SiteHeader() {
             ))}
 
             <div className="pt-2">
-              {mockUser ? (
+              {!isPending && user ? (
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3f679c] text-sm font-semibold text-white">
-                      {mockUser.initials}
-                    </div>
+                    {user.image ? (
+                      <img
+                        src={user.image}
+                        alt={userName}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3f679c] text-sm font-semibold text-white">
+                        {userInitials}
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        {mockUser.name}
+                        {userName}
                       </p>
-                      <p className="text-xs text-slate-500">{mockUser.email}</p>
+                      <p className="text-xs text-slate-500">{userEmail}</p>
                     </div>
                   </div>
+                  {canAccessDashboard ? (
+                    <Link
+                      href={adminOrigin}
+                      onClick={() => setOpen(false)}
+                      className="mt-3 inline-flex w-full items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
-                    className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
+                    onClick={handleSignOut}
+                    className="mt-3 inline-flex w-full items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-blue-200 hover:text-blue-600"
                   >
-                    Logout
+                    <LogOut className="h-4 w-4" />
+                    <span>{isSigningOut ? "Keluar..." : "Logout"}</span>
                   </button>
                 </div>
               ) : (
                 <Link
-                  href="#"
+                  href="/login"
+                  onClick={() => setOpen(false)}
                   className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-600"
                 >
                   <LogIn className="h-4 w-4" />
