@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { headers } from "next/headers"
 
 import { canAccessAdmin } from "@/lib/app-config"
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { getTestimonialsWithImageUrls } from "@/lib/testimonials"
 
 export async function GET() {
@@ -11,12 +11,12 @@ export async function GET() {
       headers: await headers(),
     })
 
-    if (!session || !canAccessAdmin(session.user.role)) {
+    if (!session || !canAccessAdmin(getSessionUserRole(session))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const items = await getTestimonialsWithImageUrls(
-      session.user.role === "admin" || session.user.role === "developer"
+      getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
         ? undefined
         : session.user.id
     )

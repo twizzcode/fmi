@@ -4,7 +4,7 @@ import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { eq } from "drizzle-orm"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { canAccessAdmin } from "@/lib/app-config"
 import { db, schema } from "@/lib/db"
 import { deleteStorageObject } from "@/lib/supabase/storage"
@@ -154,7 +154,7 @@ async function requireAdminSession(): Promise<NewsAdminActionState | null> {
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return {
       error: "Unauthorized",
       success: null,

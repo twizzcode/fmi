@@ -12,7 +12,7 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { eq } from "drizzle-orm"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import {
   adminOrigin,
   appOrigin,
@@ -21,6 +21,8 @@ import {
 } from "@/lib/app-config"
 import { db, schema } from "@/lib/db"
 import { resolveUserImage } from "@/lib/user-image"
+
+export const dynamic = "force-dynamic"
 
 export default async function AdminLayout({
   children,
@@ -36,7 +38,7 @@ export default async function AdminLayout({
     redirect(`${appOrigin}/login?redirectTo=${encodeURIComponent(adminOrigin)}`)
   }
 
-  if (!canAccessAdmin(session.user.role)) {
+  if (!canAccessAdmin(getSessionUserRole(session))) {
     redirect(appOrigin)
   }
 
@@ -57,7 +59,7 @@ export default async function AdminLayout({
             name: session.user.name,
             email: session.user.email,
             avatar: avatar ?? "",
-            role: session.user.role,
+            role: getSessionUserRole(session) ?? "user",
           }}
         />
         <SidebarInset>

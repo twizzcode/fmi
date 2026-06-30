@@ -7,17 +7,17 @@ import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 import { canAccessAdmin } from "@/lib/app-config"
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
-import {
-  deleteStorageObject,
-  deleteStorageObjects,
-  uploadImageToStorage,
-} from "@/lib/supabase/storage"
+import { deleteStorageObject, deleteStorageObjects } from "@/lib/supabase/storage"
 
 export type GalleryActionState = {
   error: string | null
   success: string | null
+}
+
+type UploadedGalleryImage = {
+  path: string
 }
 
 const initialState = {
@@ -35,7 +35,7 @@ export async function createGalleryEntryAction(
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return { error: "Unauthorized", success: null }
   }
 
@@ -49,16 +49,16 @@ export async function createGalleryEntryAction(
     return { error: eventDate.message, success: null }
   }
 
-  const images = getImageFiles(formData.getAll("images"))
-  if (images instanceof Error) {
-    return { error: images.message, success: null }
+  const uploadedImages = getUploadedGalleryImages(formData.getAll("uploadedImages"))
+  if (uploadedImages instanceof Error) {
+    return { error: uploadedImages.message, success: null }
   }
 
   let uploadedPaths: string[] = []
 
   try {
     const entryId = randomUUID()
-    uploadedPaths = await uploadGalleryImages(images)
+    uploadedPaths = uploadedImages.map((image) => image.path)
 
     await db.transaction(async (tx) => {
       await tx.insert(schema.galleryEntries).values({
@@ -129,9 +129,11 @@ export async function updateGalleryEntryAction(
   const removedPhotoIds = formData
     .getAll("removedPhotoIds")
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
-  const newImages = getOptionalImageFiles(formData.getAll("newImages"))
-  if (newImages instanceof Error) {
-    return { error: newImages.message, success: null }
+  const newUploadedImages = getOptionalUploadedGalleryImages(
+    formData.getAll("newUploadedImages")
+  )
+  if (newUploadedImages instanceof Error) {
+    return { error: newUploadedImages.message, success: null }
   }
 
   const [existingEntry] = await db
@@ -153,7 +155,7 @@ export async function updateGalleryEntryAction(
     (photo) => !removedPhotoIds.includes(photo.id)
   )
 
-  if (retainedPhotos.length === 0 && newImages.length === 0) {
+  if (retainedPhotos.length === 0 && newUploadedImages.length === 0) {
     return {
       error: "Minimal harus ada satu foto di dalam kegiatan galeri.",
       success: null,
@@ -163,7 +165,7 @@ export async function updateGalleryEntryAction(
   let uploadedPaths: string[] = []
 
   try {
-    uploadedPaths = await uploadGalleryImages(newImages)
+    uploadedPaths = newUploadedImages.map((image) => image.path)
 
     await db.transaction(async (tx) => {
       if (removedPhotoIds.length > 0) {
@@ -319,7 +321,7 @@ async function requireAdminSession(): Promise<GalleryActionState | null> {
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return {
       error: "Unauthorized",
       success: null,
@@ -351,40 +353,52 @@ function getEventDate(value: FormDataEntryValue | null) {
   return parsed
 }
 
-function getImageFiles(values: FormDataEntryValue[]) {
-  const files = values.filter(
-    (value): value is File => value instanceof File && value.size > 0
-  )
+function getUploadedGalleryImages(values: FormDataEntryValue[]) {
+  const images = values
+    .map(parseUploadedGalleryImage)
+    .filter((value): value is UploadedGalleryImage => value !== null)
 
-  if (files.length === 0) {
+  if (images.length === 0) {
     return new Error("Upload minimal satu foto galeri.")
   }
 
-  if (files.length > 10) {
+  if (images.length > 10) {
     return new Error("Maksimal 10 foto kegiatan per galeri.")
   }
 
-  return files
+  return images
 }
 
-function getOptionalImageFiles(values: FormDataEntryValue[]) {
-  return values.filter(
-    (value): value is File => value instanceof File && value.size > 0
-  )
-}
+function getOptionalUploadedGalleryImages(values: FormDataEntryValue[]) {
+  const images = values
+    .map(parseUploadedGalleryImage)
+    .filter((value): value is UploadedGalleryImage => value !== null)
 
-async function uploadGalleryImages(files: File[]) {
-  const uploadedPaths: string[] = []
-
-  for (const file of files) {
-    const path = await uploadImageToStorage({
-      file,
-      folder: "galeri",
-    })
-    uploadedPaths.push(path)
+  if (images.length > 10) {
+    return new Error("Maksimal 10 foto kegiatan per galeri.")
   }
 
-  return uploadedPaths
+  return images
+}
+
+function parseUploadedGalleryImage(value: FormDataEntryValue) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(value) as UploadedGalleryImage
+
+    if (typeof parsed.path !== "string" || !parsed.path.trim()) {
+      return null
+    }
+
+    return {
+      path: parsed.path.trim(),
+    }
+  } catch {
+    return null
+  }
 }
 
 function revalidateGalleryPaths() {

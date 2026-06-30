@@ -1,8 +1,12 @@
 const defaultAppUrl = "http://lvh.me:3000"
 const defaultAdminUrl = "http://admin.lvh.me:3000"
 
-export const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? defaultAppUrl
-export const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? defaultAdminUrl
+function getEnvUrl(value: string | undefined, fallback: string) {
+  return value?.trim() || fallback
+}
+
+export const appUrl = getEnvUrl(process.env.NEXT_PUBLIC_APP_URL, defaultAppUrl)
+export const adminUrl = getEnvUrl(process.env.NEXT_PUBLIC_ADMIN_URL, defaultAdminUrl)
 
 export const appOrigin = new URL(appUrl).origin
 export const adminOrigin = new URL(adminUrl).origin

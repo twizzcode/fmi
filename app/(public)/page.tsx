@@ -13,6 +13,8 @@ import { BlurFade } from "@/components/ui/blur-fade";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Beranda",
   description: "Forum Mahasiswa Islam FMIPA UNNES hadir sebagai wadah ukhuwah, pembinaan, dan informasi kegiatan mahasiswa muslim di FMIPA UNNES.",

@@ -5,7 +5,7 @@ import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
 import { canAccessAdmin } from "@/lib/app-config"
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { roleValues, type UserRole } from "@/lib/db/schema"
 
@@ -23,7 +23,7 @@ export async function updateMemberRoleAction(
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return { error: "Unauthorized", success: null }
   }
 

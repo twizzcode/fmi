@@ -1,6 +1,8 @@
 import { StructureAdminEditor } from "@/components/admin/structure-admin-editor"
 import { getStructureCabinets } from "@/lib/structure"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminPengurusPage() {
   const cabinets = await getStructureCabinets()
 

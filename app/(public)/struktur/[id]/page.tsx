@@ -5,6 +5,8 @@ import { PageHero } from "@/components/page-hero"
 import { StructurePageContent } from "@/components/structure-page-content"
 import { getStructureCabinetPageData } from "@/lib/structure"
 
+export const dynamic = "force-dynamic"
+
 export async function generateMetadata(
   props: PageProps<"/struktur/[id]">
 ): Promise<Metadata> {

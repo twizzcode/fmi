@@ -8,11 +8,9 @@ import { NewsBodyViewer } from "@/components/news/news-body-viewer"
 import { NewsViewTracker } from "@/components/news/news-view-tracker"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { createAppUrl } from "@/lib/app-config"
-import { getNewsArticleBySlug, getNewsArticleSlugs, getRelatedNewsArticles } from "@/lib/news"
+import { getNewsArticleBySlug, getRelatedNewsArticles } from "@/lib/news"
 
-export function generateStaticParams() {
-  return getNewsArticleSlugs().then((slugs) => slugs.map((slug) => ({ slug })))
-}
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata(
   props: PageProps<"/berita/[slug]">

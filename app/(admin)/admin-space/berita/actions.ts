@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { canAccessAdmin } from "@/lib/app-config"
 import { db, schema } from "@/lib/db"
 import type { NewsStatus } from "@/lib/db/schema"
@@ -41,7 +41,7 @@ export async function createNewsArticleAction(
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return { error: "Unauthorized", success: null }
   }
 
@@ -290,7 +290,7 @@ async function requireAdminSession(): Promise<NewsActionState | null> {
     headers: requestHeaders,
   })
 
-  if (!session || !canAccessAdmin(session.user.role)) {
+  if (!session || !canAccessAdmin(getSessionUserRole(session))) {
     return { error: "Unauthorized", success: null }
   }
 

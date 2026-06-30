@@ -28,6 +28,15 @@ const aboutItems = [
   { href: "/tentang-ldj", label: "Tentang LDJ" },
 ];
 
+function getUserRole(user: unknown) {
+  if (!user || typeof user !== "object" || !("role" in user)) {
+    return null;
+  }
+
+  const role = (user as { role?: unknown }).role;
+  return typeof role === "string" ? role : null;
+}
+
 export function SiteHeader({
   initialUserImage,
 }: {
@@ -44,7 +53,7 @@ export function SiteHeader({
   const userImage = user?.image || initialUserImage || null;
   const userName = user?.name?.trim() || "Pengguna FMI";
   const userEmail = user?.email || "";
-  const userRole = user?.role;
+  const userRole = getUserRole(user);
   const canAccessDashboard =
     userRole === "staff" ||
     userRole === "admin" ||

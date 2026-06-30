@@ -3,9 +3,9 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useMemo, useRef, useState } from "react"
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, LoaderCircleIcon, XIcon } from "lucide-react"
 
 import {
   updateGalleryEntryAction,
@@ -15,6 +15,11 @@ import { GalleryDateField } from "@/components/admin/gallery-date-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { GalleryActivity } from "@/lib/gallery"
+
+type UploadedImage = {
+  path: string
+  url: string
+}
 
 const initialGalleryActionState: GalleryActionState = {
   error: null,
@@ -33,6 +38,9 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
   const [loading, setLoading] = useState(true)
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([])
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [state, formAction] = useActionState(
     updateGalleryEntryAction,
     initialGalleryActionState
@@ -40,11 +48,12 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
 
   const previews = useMemo(
     () =>
-      selectedFiles.map((file) => ({
+      selectedFiles.map((file, index) => ({
         file,
         url: URL.createObjectURL(file),
+        uploaded: uploadedImages[index] ?? null,
       })),
-    [selectedFiles]
+    [selectedFiles, uploadedImages]
   )
 
   useEffect(() => {
@@ -90,6 +99,8 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
   function handleImagesChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []).slice(0, 10)
     setSelectedFiles(files)
+    setUploadedImages([])
+    setUploadError(null)
 
     if (event.target.files && event.target.files.length > 10) {
       const dataTransfer = new DataTransfer()
@@ -100,7 +111,10 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
 
   function handleRemoveNewImage(index: number) {
     const nextFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index)
+    const nextUploadedImages = uploadedImages.filter((_, fileIndex) => fileIndex !== index)
     setSelectedFiles(nextFiles)
+    setUploadedImages(nextUploadedImages)
+    setUploadError(null)
 
     if (!imageInputRef.current) {
       return
@@ -109,6 +123,85 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
     const dataTransfer = new DataTransfer()
     nextFiles.forEach((file) => dataTransfer.items.add(file))
     imageInputRef.current.files = dataTransfer.files
+  }
+
+  async function uploadSelectedFiles() {
+    if (selectedFiles.length === 0) {
+      return []
+    }
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const nextUploadedImages: UploadedImage[] = []
+
+      for (const file of selectedFiles) {
+        const body = new FormData()
+        body.set("file", file)
+
+        const response = await fetch("/api/admin/storage/upload", {
+          method: "POST",
+          body,
+        })
+
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string; path?: string; url?: string }
+          | null
+
+        if (!response.ok || !payload?.path || !payload.url) {
+          throw new Error(payload?.error ?? "Upload gagal diproses.")
+        }
+
+        nextUploadedImages.push({
+          path: payload.path,
+          url: payload.url,
+        })
+      }
+
+      setUploadedImages(nextUploadedImages)
+      return nextUploadedImages
+    } catch (error) {
+      setUploadedImages([])
+      setUploadError(
+        error instanceof Error ? error.message : "Upload gagal diproses."
+      )
+      return null
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  async function handleSubmit(formData: FormData) {
+    if (isUploading) {
+      return
+    }
+
+    const newImages =
+      uploadedImages.length === selectedFiles.length
+        ? uploadedImages
+        : await uploadSelectedFiles()
+
+    if (newImages === null) {
+      return
+    }
+
+    const payload = new FormData()
+    payload.set("id", galleryItem?.id ?? "")
+    payload.set("title", String(formData.get("title") ?? ""))
+    payload.set("eventDate", String(formData.get("eventDate") ?? ""))
+
+    removedPhotoIds.forEach((photoId) => {
+      payload.append("removedPhotoIds", photoId)
+    })
+
+    newImages.forEach((image) => {
+      payload.append("newUploadedImages", JSON.stringify({ path: image.path }))
+    })
+
+    startTransition(() => {
+      formAction(payload)
+    })
   }
 
   if (loading) {
@@ -158,12 +251,7 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form ref={formRef} action={formAction} className="space-y-6">
-          <input type="hidden" name="id" value={galleryItem.id} />
-          {removedPhotoIds.map((photoId) => (
-            <input key={photoId} type="hidden" name="removedPhotoIds" value={photoId} />
-          ))}
-
+        <form ref={formRef} action={handleSubmit} className="space-y-6">
           <div className="space-y-6">
             <Field label="Nama Kegiatan">
               <Input
@@ -187,6 +275,7 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
                 multiple
                 accept="image/png,image/jpeg,image/webp,image/gif"
                 onChange={handleImagesChange}
+                disabled={isUploading}
               />
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Bisa upload banyak foto sekaligus untuk satu kegiatan galeri. Maksimal 10 foto. Format: PNG, JPG, WEBP, GIF.
@@ -213,10 +302,12 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
                           >
                             <div className="relative aspect-square w-full">
                               {photo.url ? (
-                                <img
+                                <Image
                                   src={photo.url}
                                   alt={photo.alt}
-                                  className={`h-full w-full object-cover ${isRemoved ? "opacity-40" : ""}`}
+                                  fill
+                                  unoptimized
+                                  className={`object-cover ${isRemoved ? "opacity-40" : ""}`}
                                 />
                               ) : (
                                 <div className="flex h-full items-center justify-center text-xs text-slate-400">
@@ -269,12 +360,15 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
                             onClick={() => handleRemoveNewImage(index)}
                             className="absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/80"
                             aria-label={`Hapus ${preview.file.name}`}
+                            disabled={isUploading}
                           >
                             <XIcon className="size-4" />
                           </button>
                           <div className="border-t border-slate-200 px-3 py-2 text-xs text-slate-600">
                             <p className="truncate font-medium text-slate-800">{preview.file.name}</p>
-                            <p className="mt-1 text-slate-500">Foto baru</p>
+                            <p className="mt-1 text-slate-500">
+                              {preview.uploaded ? "Siap dikirim" : "Belum diupload"}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -289,6 +383,12 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
             Jika semua foto lama dihapus, upload minimal satu foto baru dulu sebelum simpan.
           </div>
 
+          {uploadError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-600">{uploadError}</p>
+            </div>
+          ) : null}
+
           {state.error ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <p className="text-sm text-red-600">{state.error}</p>
@@ -300,10 +400,11 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
               type="button"
               variant="outline"
               onClick={() => router.push("/galeri")}
+              disabled={isUploading}
             >
               Batal
             </Button>
-            <SubmitButton />
+            <SubmitButton isUploading={isUploading} />
           </div>
         </form>
       </section>
@@ -311,16 +412,25 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
   )
 }
 
-function SubmitButton() {
+function SubmitButton({ isUploading }: { isUploading: boolean }) {
   const { pending } = useFormStatus()
 
   return (
     <Button
       type="submit"
       className="bg-[#3f679c] text-white hover:bg-[#355887]"
-      disabled={pending}
+      disabled={pending || isUploading}
     >
-      {pending ? "Menyimpan..." : "Simpan Perubahan"}
+      {isUploading ? (
+        <>
+          <LoaderCircleIcon className="size-4 animate-spin" />
+          Mengunggah...
+        </>
+      ) : pending ? (
+        "Menyimpan..."
+      ) : (
+        "Simpan Perubahan"
+      )}
     </Button>
   )
 }

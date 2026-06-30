@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 
 import { getStructureCabinetHref, getStructurePageData } from "@/lib/structure"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   robots: {
     index: false,

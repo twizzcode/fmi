@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { PlusCircleIcon, PencilIcon } from "lucide-react"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { DeleteNewsButton } from "./delete-news-button"
 import {
@@ -43,7 +43,7 @@ export default async function AdminBeritaPage({
   const itemsPerPage = 10
 
   const items = await getAdminNewsArticles(
-    session.user.role === "admin" || session.user.role === "developer"
+    getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
       ? undefined
       : session.user.id
   )

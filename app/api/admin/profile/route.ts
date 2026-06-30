@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
 import { headers } from "next/headers"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { deleteStorageObject, uploadImageToStorage } from "@/lib/supabase/storage"
 

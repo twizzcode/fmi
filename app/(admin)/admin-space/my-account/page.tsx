@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { UpdateProfileForm } from "@/components/admin/update-profile-form"
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { resolveUserImage } from "@/lib/user-image"
 

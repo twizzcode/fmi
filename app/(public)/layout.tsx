@@ -8,6 +8,8 @@ import { auth } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { resolveUserImage } from "@/lib/user-image"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   openGraph: {
     type: "website",

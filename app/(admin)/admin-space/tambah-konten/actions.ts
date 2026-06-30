@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { uploadImageToStorage } from "@/lib/supabase/storage"
 

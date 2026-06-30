@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { CheckIcon, PencilIcon, PlusCircleIcon, XIcon } from "lucide-react"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { DeleteTestimonialButton } from "@/components/admin/delete-testimonial-button"
 import { deleteTestimonialAction } from "@/app/(admin)/admin-space/testimoni/actions"
@@ -44,7 +44,7 @@ export default async function AdminTestimoniPage({
   const itemsPerPage = 10
 
   const testimonials = await getTestimonialsWithImageUrls(
-    session.user.role === "admin" || session.user.role === "developer"
+    getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
       ? undefined
       : session.user.id
   )

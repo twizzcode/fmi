@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { canAccessAdmin } from "@/lib/app-config"
 import { createSignedStorageUrl, uploadImageToStorage } from "@/lib/supabase/storage"
 
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       headers: request.headers,
     })
 
-    if (!session || !canAccessAdmin(session.user.role)) {
+    if (!session || !canAccessAdmin(getSessionUserRole(session))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

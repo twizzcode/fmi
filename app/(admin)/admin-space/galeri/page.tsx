@@ -5,7 +5,7 @@ import { CheckIcon, PlusCircleIcon, PencilIcon, XIcon } from "lucide-react"
 
 import { deleteGalleryEntryAction } from "@/app/(admin)/admin-space/galeri/actions"
 import { DeleteGalleryButton } from "@/components/admin/delete-gallery-button"
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import {
   Pagination,
@@ -47,7 +47,7 @@ export default async function AdminGaleriPage({
   const isConfigured = isSupabaseStorageConfigured()
   const items = isConfigured
     ? await getGalleryActivities(
-        session.user.role === "admin" || session.user.role === "developer"
+        getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
           ? undefined
           : session.user.id
       )

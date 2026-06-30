@@ -3,14 +3,19 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useMemo, useRef, useState } from "react"
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, LoaderCircleIcon, XIcon } from "lucide-react"
 
 import { createGalleryEntryAction, type GalleryActionState } from "@/app/(admin)/admin-space/galeri/actions"
 import { GalleryDateField } from "@/components/admin/gallery-date-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+
+type UploadedImage = {
+  path: string
+  url: string
+}
 
 const initialGalleryActionState: GalleryActionState = {
   error: null,
@@ -19,9 +24,11 @@ const initialGalleryActionState: GalleryActionState = {
 
 export default function TambahGaleriPage() {
   const router = useRouter()
-  const formRef = useRef<HTMLFormElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [state, formAction] = useActionState(
     createGalleryEntryAction,
     initialGalleryActionState
@@ -29,11 +36,12 @@ export default function TambahGaleriPage() {
 
   const previews = useMemo(
     () =>
-      selectedFiles.map((file) => ({
+      selectedFiles.map((file, index) => ({
         file,
         url: URL.createObjectURL(file),
+        uploaded: uploadedImages[index] ?? null,
       })),
-    [selectedFiles]
+    [selectedFiles, uploadedImages]
   )
 
   useEffect(() => {
@@ -51,6 +59,8 @@ export default function TambahGaleriPage() {
   function handleImagesChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []).slice(0, 10)
     setSelectedFiles(files)
+    setUploadedImages([])
+    setUploadError(null)
 
     if (event.target.files && event.target.files.length > 10) {
       const dataTransfer = new DataTransfer()
@@ -61,7 +71,10 @@ export default function TambahGaleriPage() {
 
   function handleRemoveImage(index: number) {
     const nextFiles = selectedFiles.filter((_, fileIndex) => fileIndex !== index)
+    const nextUploadedImages = uploadedImages.filter((_, fileIndex) => fileIndex !== index)
     setSelectedFiles(nextFiles)
+    setUploadedImages(nextUploadedImages)
+    setUploadError(null)
 
     if (!imageInputRef.current) {
       return
@@ -70,6 +83,81 @@ export default function TambahGaleriPage() {
     const dataTransfer = new DataTransfer()
     nextFiles.forEach((file) => dataTransfer.items.add(file))
     imageInputRef.current.files = dataTransfer.files
+  }
+
+  async function uploadSelectedFiles() {
+    if (selectedFiles.length === 0) {
+      setUploadError("Pilih foto dulu.")
+      return null
+    }
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const nextUploadedImages: UploadedImage[] = []
+
+      for (const file of selectedFiles) {
+        const body = new FormData()
+        body.set("file", file)
+
+        const response = await fetch("/api/admin/storage/upload", {
+          method: "POST",
+          body,
+        })
+
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string; path?: string; url?: string }
+          | null
+
+        if (!response.ok || !payload?.path || !payload.url) {
+          throw new Error(payload?.error ?? "Upload gagal diproses.")
+        }
+
+        nextUploadedImages.push({
+          path: payload.path,
+          url: payload.url,
+        })
+      }
+
+      setUploadedImages(nextUploadedImages)
+      return nextUploadedImages
+    } catch (error) {
+      setUploadedImages([])
+      setUploadError(
+        error instanceof Error ? error.message : "Upload gagal diproses."
+      )
+      return null
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  async function handleSubmit(formData: FormData) {
+    if (isUploading) {
+      return
+    }
+
+    const images =
+      uploadedImages.length === selectedFiles.length && uploadedImages.length > 0
+        ? uploadedImages
+        : await uploadSelectedFiles()
+
+    if (!images || images.length === 0) {
+      return
+    }
+
+    const payload = new FormData()
+    payload.set("title", String(formData.get("title") ?? ""))
+    payload.set("eventDate", String(formData.get("eventDate") ?? ""))
+
+    images.forEach((image) => {
+      payload.append("uploadedImages", JSON.stringify({ path: image.path }))
+    })
+
+    startTransition(() => {
+      formAction(payload)
+    })
   }
 
   return (
@@ -93,7 +181,7 @@ export default function TambahGaleriPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form ref={formRef} action={formAction} className="space-y-6">
+        <form action={handleSubmit} className="space-y-6">
           <div className="space-y-6">
             <Field label="Nama Kegiatan">
               <Input
@@ -117,6 +205,7 @@ export default function TambahGaleriPage() {
                 accept="image/png,image/jpeg,image/webp,image/gif"
                 required={selectedFiles.length === 0}
                 onChange={handleImagesChange}
+                disabled={isUploading}
               />
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Bisa upload banyak foto sekaligus untuk satu kegiatan galeri. Maksimal 10 foto. Format: PNG, JPG, WEBP, GIF.
@@ -139,11 +228,15 @@ export default function TambahGaleriPage() {
                         onClick={() => handleRemoveImage(index)}
                         className="absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/80"
                         aria-label={`Hapus ${preview.file.name}`}
+                        disabled={isUploading}
                       >
                         <XIcon className="size-4" />
                       </button>
                       <div className="border-t border-slate-200 px-3 py-2 text-xs text-slate-600">
                         <p className="truncate font-medium text-slate-800">{preview.file.name}</p>
+                        <p className="mt-1 text-slate-500">
+                          {preview.uploaded ? "Siap dikirim" : "Belum diupload"}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -151,6 +244,12 @@ export default function TambahGaleriPage() {
               ) : null}
             </Field>
           </div>
+
+          {uploadError ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm text-red-600">{uploadError}</p>
+            </div>
+          ) : null}
 
           {state.error ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -163,10 +262,11 @@ export default function TambahGaleriPage() {
               type="button"
               variant="outline"
               onClick={() => router.push("/galeri")}
+              disabled={isUploading}
             >
               Batal
             </Button>
-            <SubmitButton />
+            <SubmitButton isUploading={isUploading} />
           </div>
         </form>
       </section>
@@ -174,16 +274,25 @@ export default function TambahGaleriPage() {
   )
 }
 
-function SubmitButton() {
+function SubmitButton({ isUploading }: { isUploading: boolean }) {
   const { pending } = useFormStatus()
 
   return (
     <Button
       type="submit"
       className="bg-[#3f679c] text-white hover:bg-[#355887]"
-      disabled={pending}
+      disabled={pending || isUploading}
     >
-      {pending ? "Menyimpan..." : "Simpan Kegiatan"}
+      {isUploading ? (
+        <>
+          <LoaderCircleIcon className="size-4 animate-spin" />
+          Mengunggah...
+        </>
+      ) : pending ? (
+        "Menyimpan..."
+      ) : (
+        "Simpan Kegiatan"
+      )}
     </Button>
   )
 }

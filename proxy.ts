@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-import { auth } from "@/lib/auth"
+import { auth, getSessionUserRole } from "@/lib/auth"
 import {
   appOrigin,
   canAccessAdmin,
@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (!canAccessAdmin(session.user.role)) {
+  if (!canAccessAdmin(getSessionUserRole(session))) {
     return NextResponse.redirect(new URL("/", appOrigin))
   }
 
