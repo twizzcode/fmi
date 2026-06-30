@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from "@radix-ui/react-icons"
 import { notFound } from "next/navigation"
 
 import { NewsBodyViewer } from "@/components/news/news-body-viewer"
+import { NewsViewTracker } from "@/components/news/news-view-tracker"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { getNewsArticleBySlug, getNewsArticleSlugs, getRelatedNewsArticles } from "@/lib/news"
 
@@ -25,6 +26,7 @@ export default async function NewsDetailPage(
 
   return (
     <div className="bg-white">
+      <NewsViewTracker articleId={article.id} />
       <article className="mx-auto max-w-7xl px-6 py-14 md:py-20">
         <BlurFade delay={0.04}>
           <Link
@@ -57,7 +59,7 @@ export default async function NewsDetailPage(
                     alt={article.title}
                     fill
                     priority
-                    className="object-contain p-10"
+                    className="object-cover"
                   />
                 </div>
               </div>

@@ -1,15 +1,8 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
+import { DynamicBreadcrumb } from "@/components/admin/dynamic-breadcrumb"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -66,19 +59,7 @@ export default async function AdminLayout({
                 orientation="vertical"
                 className="mr-2 data-vertical:h-4 data-vertical:self-auto"
               />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem className="hidden md:block">
-                    <BreadcrumbLink href={adminOrigin}>
-                      FMI Admin
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator className="hidden md:block" />
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <DynamicBreadcrumb adminOrigin={adminOrigin} />
             </div>
           </header>
           {children}

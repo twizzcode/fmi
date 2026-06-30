@@ -10,6 +10,16 @@ import { HomeServicesSection } from "@/components/home-services-section";
 import { getLatestNewsArticles } from "@/lib/news";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+function getAuthorInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
 
 export default async function Home() {
   const latestNews = await getLatestNewsArticles(3)
@@ -53,7 +63,7 @@ export default async function Home() {
                   asChild
                   className="w-[12.25rem] rounded-full bg-white px-6 py-6 text-base font-normal !text-slate-900 shadow-lg shadow-black/10 transition-colors duration-300 hover:bg-[#3f679c] hover:!text-white"
                 >
-                  <a
+                  <Link
                     href="/tentang-fmiunnes"
                     className="group relative inline-flex items-center justify-center overflow-hidden transition-colors duration-300"
                   >
@@ -66,7 +76,7 @@ export default async function Home() {
                       </span>
                     </span>
                     <ArrowRightIcon className="absolute right-4 h-4 w-4 shrink-0 transition-transform duration-300 ease-out group-hover:translate-x-1" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </BlurFade>
@@ -183,13 +193,12 @@ export default async function Home() {
             >
               <Link href={`/berita/${item.slug}`} className="group block h-full">
                 <article className="flex h-full flex-col">
-                  <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[1.5rem] bg-slate-100">
+                  <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
                     <Image
                       src={item.imageUrl}
                       alt={item.title}
-                      width={180}
-                      height={180}
-                      className="h-auto w-32 object-contain transition duration-300 group-hover:scale-105"
+                      fill
+                      className="object-cover transition duration-300 group-hover:scale-105"
                     />
                   </div>
 
@@ -208,9 +217,12 @@ export default async function Home() {
 
                     <div className="mt-6 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-900">
-                          FMI
-                        </div>
+                        <Avatar className="h-10 w-10 border border-slate-200 bg-white">
+                          <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
+                          <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
+                            {getAuthorInitials(item.author)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <p className="text-xs font-medium text-slate-900">
                             {item.author}

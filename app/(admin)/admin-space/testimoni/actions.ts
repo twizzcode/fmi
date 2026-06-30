@@ -75,6 +75,7 @@ export async function createTestimonialAction(
 
     await db.insert(schema.testimonials).values({
       id: randomUUID(),
+      userId: session.user.id,
       name: name.trim(),
       designation: designation.trim(),
       quote: quote.trim(),
@@ -146,7 +147,7 @@ export async function updateTestimonialAction(
 
   if (shouldReplaceImage && (!(image instanceof File) || image.size === 0)) {
     return {
-      error: "Unggah foto baru jika ingin mengganti foto lama.",
+      error: "Upload ulang foto wajib dilakukan sebelum menyimpan perubahan.",
       success: null,
     }
   }
@@ -222,11 +223,13 @@ export async function deleteTestimonialAction(
   }
 
   try {
+    if (existing.imagePath) {
+      await deleteStorageObject(existing.imagePath)
+    }
+
     await db
       .delete(schema.testimonials)
       .where(eq(schema.testimonials.id, existing.id))
-
-    await deleteStorageObject(existing.imagePath).catch(() => undefined)
 
     revalidatePath("/admin-space/testimoni")
     revalidatePath("/testimoni")
@@ -262,3 +265,4 @@ async function requireAdminSession(): Promise<TestimonialActionState | null> {
 
   return null
 }
+

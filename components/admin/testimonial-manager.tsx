@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import {
   PencilIcon,
@@ -16,6 +16,7 @@ import {
   updateTestimonialAction,
 } from "@/app/(admin)/admin-space/testimoni/actions"
 import { Button } from "@/components/ui/button"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import {
   Dialog,
   DialogClose,
@@ -59,15 +60,14 @@ export function TestimonialManager({
   }
 
   return (
-    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {testimonials.map((item) => (
         <article
           key={item.id}
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
         >
-          <div className="aspect-[4/3] bg-slate-100">
+          <div className="aspect-square bg-slate-100">
             {item.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.imageUrl}
                 alt={item.name}
@@ -146,7 +146,13 @@ function EditDialogContent({
   item: TestimonialView
   onClose: () => void
 }) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [replaceImage, setReplaceImage] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(item.imageUrl ?? "")
+  const [cropDialogOpen, setCropDialogOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [croppedFile, setCroppedFile] = useState<File | null>(null)
   const [state, formAction] = useActionState(
     updateTestimonialAction,
     initialActionState
@@ -158,9 +164,46 @@ function EditDialogContent({
     }
   }, [state.success, onClose])
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl !== item.imageUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [item.imageUrl, previewUrl])
+
+  function handleFileSelection(file: File | null) {
+    if (!file) {
+      return
+    }
+
+    setSelectedFile(file)
+    setCropDialogOpen(true)
+  }
+
+  function handleCropComplete(nextCroppedFile: File) {
+    if (previewUrl && previewUrl !== item.imageUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
+    setCroppedFile(nextCroppedFile)
+    setPreviewUrl(URL.createObjectURL(nextCroppedFile))
+    setReplaceImage(true)
+    setSelectedFile(null)
+  }
+
+  async function handleSubmit(formData: FormData) {
+    if (replaceImage && croppedFile) {
+      formData.set("image", croppedFile)
+      formData.set("replaceImage", "on")
+    }
+
+    return formAction(formData)
+  }
+
   return (
     <DialogContent className="sm:!max-w-4xl h-[60vh] max-h-[60vh] overflow-hidden rounded-2xl p-0">
-      <form action={formAction} className="flex h-full flex-col">
+      <form ref={formRef} action={handleSubmit} className="flex h-full flex-col">
         <input type="hidden" name="id" value={item.id} />
         <DialogHeader className="px-6 pt-6">
           <DialogTitle>Edit Testimoni</DialogTitle>
@@ -173,10 +216,9 @@ function EditDialogContent({
           <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
             <div className="space-y-3">
               <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
-                {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                {previewUrl ? (
                   <img
-                    src={item.imageUrl}
+                    src={previewUrl}
                     alt={item.name}
                     className="h-full w-full object-cover"
                   />
@@ -203,9 +245,12 @@ function EditDialogContent({
                     Upload foto baru
                   </div>
                   <Input
-                    name="image"
+                    ref={fileInputRef}
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={(event) =>
+                      handleFileSelection(event.target.files?.[0] ?? null)
+                    }
                   />
                   <p className="mt-2 text-xs leading-5 text-slate-500">
                     Saat disimpan, foto lama akan dihapus dan diganti dengan
@@ -252,12 +297,8 @@ function EditDialogContent({
             </div>
           </div>
 
-          {state.error ? (
-            <p className="text-sm text-red-600">{state.error}</p>
-          ) : null}
-          {state.success ? (
-            <p className="text-sm text-emerald-600">{state.success}</p>
-          ) : null}
+          {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+          {state.success ? <p className="text-sm text-emerald-600">{state.success}</p> : null}
         </div>
 
         <DialogFooter className="mx-0 mb-0 rounded-b-2xl">
@@ -269,6 +310,14 @@ function EditDialogContent({
           <SubmitButton label="Simpan Perubahan" pendingLabel="Menyimpan..." />
         </DialogFooter>
       </form>
+
+      <ImageCropper
+        dialogOpen={cropDialogOpen}
+        setDialogOpen={setCropDialogOpen}
+        selectedFile={selectedFile}
+        onCropComplete={handleCropComplete}
+        aspect={1}
+      />
     </DialogContent>
   )
 }

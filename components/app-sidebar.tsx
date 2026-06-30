@@ -15,13 +15,12 @@ import {
 } from "@/components/ui/sidebar"
 import {
   BriefcaseBusinessIcon,
-  CalendarDaysIcon,
   GalleryVerticalEndIcon,
   HomeIcon,
   ImageIcon,
   MessageSquareQuoteIcon,
   NewspaperIcon,
-  Settings2Icon,
+  UserIcon,
   UsersIcon,
 } from "lucide-react"
 
@@ -57,7 +56,7 @@ const data = {
     },
     {
       title: "Berita",
-      url: "/berita",
+      url: "/admin/berita",
       icon: (
         <NewspaperIcon
         />
@@ -65,12 +64,22 @@ const data = {
     },
     {
       title: "Galeri",
-      url: "/galeri",
+      url: "/admin/galeri",
       icon: (
         <ImageIcon
         />
       ),
     },
+    {
+      title: "Testimoni",
+      url: "/admin/testimoni",
+      icon: (
+        <MessageSquareQuoteIcon
+        />
+      ),
+    },
+  ],
+  navFeature: [
     {
       title: "Layanan",
       url: "/layanan",
@@ -88,33 +97,7 @@ const data = {
       ),
     },
     {
-      title: "Testimoni",
-      url: "/testimoni",
-      icon: (
-        <MessageSquareQuoteIcon
-        />
-      ),
-    },
-    {
-      title: "Pengaturan",
-      url: "/pengaturan",
-      icon: (
-        <Settings2Icon
-        />
-      ),
-    },
-  ],
-  projects: [
-    {
-      name: "Agenda Kegiatan",
-      url: "/agenda",
-      icon: (
-        <CalendarDaysIcon
-        />
-      ),
-    },
-    {
-      name: "Anggota",
+      title: "Anggota",
       url: "/anggota",
       icon: (
         <UsersIcon
@@ -122,17 +105,62 @@ const data = {
       ),
     },
   ],
+  navAccount: [
+    {
+      title: "My Account",
+      url: "/my-account",
+      icon: (
+        <UserIcon
+        />
+      ),
+    },
+  ],
+  projects: [
+    {
+      name: "Berita",
+      url: "/berita",
+      icon: (
+        <NewspaperIcon
+        />
+      ),
+    },
+    {
+      name: "Galeri",
+      url: "/galeri",
+      icon: (
+        <ImageIcon
+        />
+      ),
+    },
+    {
+      name: "Testimoni",
+      url: "/testimoni",
+      icon: (
+        <MessageSquareQuoteIcon
+        />
+      ),
+    },
+  ],
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const canSeeAdminSections = user.role === "admin" || user.role === "developer"
+  const canSeeWorkplaceSections =
+    user.role === "staff" ||
+    user.role === "alumni" ||
+    user.role === "admin" ||
+    user.role === "developer"
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {canSeeAdminSections ? <NavMain items={data.navMain} /> : null}
+        {canSeeAdminSections ? <NavMain items={data.navFeature} label="Feature" /> : null}
+        {canSeeWorkplaceSections ? <NavProjects projects={data.projects} /> : null}
+        <NavMain items={data.navAccount} label="Account" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

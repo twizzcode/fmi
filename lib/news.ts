@@ -12,6 +12,7 @@ export type NewsArticle = {
   excerpt: string
   category: string
   author: string
+  authorImageUrl: string | null
   imagePath: string
   imageUrl: string
   bodyJson: string
@@ -25,8 +26,12 @@ export type NewsArticle = {
 export async function getNewsArticles() {
   const hasStoredItems = await hasStoredNewsArticles()
   const items = await db
-    .select()
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+    })
     .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
     .where(eq(schema.newsArticles.status, "published"))
     .orderBy(desc(schema.newsArticles.publishedAt))
 
@@ -45,8 +50,12 @@ export async function getLatestNewsArticles(limit = 3) {
 export async function getNewsArticleBySlug(slug: string) {
   const hasStoredItems = await hasStoredNewsArticles()
   const [item] = await db
-    .select()
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+    })
     .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
     .where(
       and(
         eq(schema.newsArticles.slug, slug),
@@ -76,8 +85,12 @@ export async function getRelatedNewsArticles(slug: string, limit = 3) {
   }
 
   const items = await db
-    .select()
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+    })
     .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
     .where(
       and(
         ne(schema.newsArticles.slug, slug),
@@ -105,14 +118,19 @@ export async function getNewsArticleSlugs() {
   return items.map((item) => item.slug)
 }
 
-export async function getAdminNewsArticles() {
+export async function getAdminNewsArticles(userId?: string) {
   const items = await db
-    .select()
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+    })
     .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
+    .where(userId ? eq(schema.newsArticles.userId, userId) : undefined)
     .orderBy(desc(schema.newsArticles.publishedAt))
 
   if (items.length === 0) {
-    return fallbackNewsItems.map(mapFallbackNewsItem)
+    return []
   }
 
   return Promise.all(items.map(mapDbNewsArticle))
@@ -155,32 +173,37 @@ export function createBodyJsonFromParagraphs(paragraphs: string[]) {
   })
 }
 
-async function mapDbNewsArticle(
-  item: typeof schema.newsArticles.$inferSelect
-): Promise<NewsArticle> {
-  let imageUrl = item.imagePath
+async function mapDbNewsArticle({
+  article,
+  authorImage,
+}: {
+  article: typeof schema.newsArticles.$inferSelect
+  authorImage: string | null
+}): Promise<NewsArticle> {
+  let imageUrl = article.imagePath
 
   try {
-    imageUrl = await createSignedStorageUrl(item.imagePath)
+    imageUrl = await createSignedStorageUrl(article.imagePath)
   } catch {
-    imageUrl = item.imagePath
+    imageUrl = article.imagePath
   }
 
   return {
-    id: item.id,
-    slug: item.slug,
-    title: item.title,
-    excerpt: item.excerpt,
-    category: item.category,
-    author: item.author,
-    imagePath: item.imagePath,
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    excerpt: article.excerpt,
+    category: article.category,
+    author: article.author,
+    authorImageUrl: authorImage,
+    imagePath: article.imagePath,
     imageUrl,
-    bodyJson: item.bodyJson,
-    status: item.status,
-    views: item.views,
-    publishedAt: item.publishedAt,
-    date: formatDate(item.publishedAt),
-    dateISO: item.publishedAt.toISOString().slice(0, 10),
+    bodyJson: article.bodyJson,
+    status: article.status,
+    views: article.views,
+    publishedAt: article.publishedAt,
+    date: formatDate(article.publishedAt),
+    dateISO: article.publishedAt.toISOString().slice(0, 10),
   }
 }
 
@@ -194,6 +217,7 @@ function mapFallbackNewsItem(
     excerpt: item.excerpt,
     category: item.category,
     author: item.author,
+    authorImageUrl: null,
     imagePath: item.image,
     imageUrl: item.image,
     bodyJson: createBodyJsonFromParagraphs(item.content),

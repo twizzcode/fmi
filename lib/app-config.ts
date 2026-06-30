@@ -19,7 +19,7 @@ export const cookieDomain =
   process.env.AUTH_COOKIE_DOMAIN ?? getCookieDomainFromUrl(appUrl)
 
 export function canAccessAdmin(role?: string | null) {
-  return role === "admin" || role === "developer"
+  return role === "staff" || role === "admin" || role === "developer"
 }
 
 export function isAdminHost(host?: string | null) {

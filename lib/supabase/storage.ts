@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import sharp from "sharp"
 
 import { supabaseStorageBucket } from "@/lib/supabase/config"
 import { createSupabaseAdminClient } from "@/lib/supabase/server"
@@ -65,15 +66,15 @@ export async function uploadImageToStorage({
   await ensureStorageBucketExists()
 
   const supabase = createSupabaseAdminClient()
-  const extension = getFileExtension(file.name, file.type)
-  const fileName = `${randomUUID()}.${extension}`
+  const optimizedBuffer = await optimizeImageForStorage(file)
+  const fileName = `${randomUUID()}.webp`
   const objectPath = `${folder}/${fileName}`
 
   const { error } = await supabase.storage
     .from(supabaseStorageBucket)
-    .upload(objectPath, file, {
+    .upload(objectPath, optimizedBuffer, {
       cacheControl: "3600",
-      contentType: file.type,
+      contentType: "image/webp",
       upsert: false,
     })
 
@@ -102,14 +103,22 @@ export async function createSignedStorageUrl(path: string, expiresIn = 3600) {
 }
 
 export async function deleteStorageObject(path: string) {
-  if (!isStorageObjectPath(path)) {
+  await deleteStorageObjects([path])
+}
+
+export async function deleteStorageObjects(paths: string[]) {
+  const normalizedPaths = Array.from(
+    new Set(paths.filter((path) => isStorageObjectPath(path)))
+  )
+
+  if (normalizedPaths.length === 0) {
     return
   }
 
   const supabase = createSupabaseAdminClient()
   const { error } = await supabase.storage
     .from(supabaseStorageBucket)
-    .remove([path])
+    .remove(normalizedPaths)
 
   if (error) {
     throw error
@@ -120,19 +129,23 @@ export function isStorageObjectPath(path: string) {
   return !path.startsWith("/") && !path.startsWith("http://") && !path.startsWith("https://")
 }
 
-function getFileExtension(fileName: string, mimeType: string) {
-  const normalizedName = fileName.toLowerCase()
+async function optimizeImageForStorage(file: File) {
+  const sourceBuffer = Buffer.from(await file.arrayBuffer())
+  const image = sharp(sourceBuffer, {
+    animated: file.type === "image/gif",
+  })
 
-  if (normalizedName.endsWith(".png")) return "png"
-  if (normalizedName.endsWith(".jpg") || normalizedName.endsWith(".jpeg")) {
-    return "jpg"
-  }
-  if (normalizedName.endsWith(".webp")) return "webp"
-  if (normalizedName.endsWith(".gif")) return "gif"
-
-  if (mimeType === "image/png") return "png"
-  if (mimeType === "image/webp") return "webp"
-  if (mimeType === "image/gif") return "gif"
-
-  return "jpg"
+  return image
+    .rotate()
+    .resize({
+      width: 2200,
+      height: 2200,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: 82,
+      effort: 5,
+    })
+    .toBuffer()
 }

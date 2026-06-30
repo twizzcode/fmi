@@ -85,10 +85,31 @@ export const departmentProfiles = [
 ];
 
 export const siteStats = [
-  { label: "Departemen", value: "4+" },
-  { label: "LDJ Mitra", value: "8" },
-  { label: "Program Aktif", value: "12" },
+  { label: "Departemen", value: "8" },
+  { label: "LDJ Mitra", value: "6" },
+  { label: "Program Aktif", value: "20+" },
 ];
+
+export const structureOverview = {
+  id: "kabinet-arunika-peradaban",
+  cabinetName: "Kabinet Arunika Peradaban",
+  cabinetTheme: "Merawat ruh gerak, menumbuhkan kebermanfaatan",
+  cabinetPhilosophy:
+    "Arunika melambangkan cahaya awal yang menandai harapan baru. Nama ini dipilih sebagai ikhtiar agar tiap pengurus FMI bergerak dengan kejernihan niat, kekuatan kolaborasi, dan dampak yang terasa bagi civitas FMIPA. Kabinet ini dibayangkan bukan sekadar sebagai susunan kerja, tetapi sebagai ruang tumbuh bersama yang menautkan semangat keilmuan, ukhuwah, dan keberanian mengambil peran. Di dalamnya, setiap fungsionaris diharapkan mampu menghadirkan kontribusi yang membumi: rapi dalam gagasan, hangat dalam relasi, dan tangguh dalam menjaga arah gerak organisasi agar tetap bernilai bagi lingkungan kampus maupun masyarakat yang lebih luas.",
+  logoTitle: "Logo Kabinet",
+  logoPhilosophy:
+    "Identitas visual kabinet dimaknai sebagai titik temu antara ilmu, iman, dan gerak kolektif. Bentuk yang bertumbuh ke atas merepresentasikan orientasi perbaikan yang terus diusahakan dari waktu ke waktu, sedangkan ritme garis di dalamnya menggambarkan kesinambungan peran tiap fungsionaris yang saling menguatkan. Komposisi visual ini juga dibaca sebagai simbol keseimbangan: antara idealisme dan kerja nyata, antara keteguhan nilai dan keluwesan gerak, serta antara tanggung jawab personal dan kontribusi bersama. Dengan demikian, logo kabinet tidak hanya hadir sebagai penanda identitas, tetapi juga sebagai pengingat arah bahwa setiap langkah pengurus FMI perlu berpijak pada makna, keterhubungan, dan semangat bertumbuh yang terus dijaga sepanjang masa amanah.",
+  logoPath: "/images/logo-fmi-hitam.png",
+}
+
+export const structureCabinetOptions = [
+  {
+    id: structureOverview.id,
+    name: structureOverview.cabinetName,
+    logoPath: structureOverview.logoPath,
+    orderLabel: "Kabinet 01",
+  },
+]
 
 export const visionMission = {
   vision:
@@ -102,39 +123,56 @@ export const visionMission = {
 
 export const structureSections = [
   {
-    department: "BPH",
+    department: "Pengurus Harian",
     members: [
       {
         name: "Alya Nadhifa",
         position: "Ketua Umum",
-        program: "Matematika 2023",
+        program: "Matematika",
+        entryYear: "2023",
+        gender: "akhwat",
+        quote: "Menjaga FMI tetap hangat, terarah, dan bertumbuh bersama anggotanya.",
         instagram: "@alya.ndf",
+        linkedin: "https://www.linkedin.com/in/alya-ndf",
         photo: "/images/foto bersama.jpg",
       },
       {
         name: "Fauzan Rahman",
         position: "Wakil Ketua",
-        program: "Fisika 2023",
+        program: "Fisika",
+        entryYear: "2023",
+        gender: "ikhwan",
+        quote: "Kolaborasi yang rapi membuat gerak organisasi jauh lebih bermakna.",
         instagram: "@fauzanrhmn",
+        github: "https://github.com/fauzanrhmn",
         photo: "/images/foto bersama.jpg",
       },
     ],
   },
   {
-    department: "Syiar Media",
+    department: "Hujanmed",
     members: [
       {
         name: "Nabila Salsabila",
         position: "Kepala Departemen",
-        program: "Kimia 2022",
+        program: "Kimia",
+        entryYear: "2022",
+        gender: "akhwat",
+        quote: "Media FMI harus terasa dekat, jernih, dan relevan dengan mahasiswa hari ini.",
         instagram: "@nabilasls",
+        tiktok: "https://www.tiktok.com/@nabilasls",
+        youtube: "https://www.youtube.com/@nabilasls",
         photo: "/images/foto bersama.jpg",
       },
       {
         name: "Rafi Akbar",
         position: "Staff Media",
-        program: "Informatika 2024",
+        program: "Informatika",
+        entryYear: "2024",
+        gender: "ikhwan",
+        quote: "Dokumentasi yang baik bukan cuma arsip, tapi cara merawat cerita organisasi.",
         instagram: "@rafiakbr",
+        website: "https://rafiakbar.dev",
         photo: "/images/foto bersama.jpg",
       },
     ],
@@ -145,14 +183,20 @@ export const structureSections = [
       {
         name: "Naufal Hidayat",
         position: "Kepala Departemen",
-        program: "Biologi 2022",
+        program: "Biologi",
+        entryYear: "2022",
+        gender: "ikhwan",
+        quote: "Kaderisasi yang sehat dimulai dari perhatian yang tulus pada proses tiap orang.",
         instagram: "@naufalhyd",
         photo: "/images/foto bersama.jpg",
       },
       {
         name: "Siti Rahmah",
         position: "Staff Mentoring",
-        program: "Statistika 2024",
+        program: "Statistika",
+        entryYear: "2024",
+        gender: "akhwat",
+        quote: "Belajar bersama membuat proses bertumbuh terasa lebih ringan dan menyenangkan.",
         instagram: "@sitirhmh",
         photo: "/images/foto bersama.jpg",
       },
@@ -162,25 +206,46 @@ export const structureSections = [
 
 export const ldjItems = [
   {
-    name: "LDJ Matematika",
+    name: "Alhusna",
+    department: "Ilmu Komputer",
     description:
-      "Komunitas dakwah jurusan yang aktif mengadakan kajian, pembinaan, dan ruang berbagi untuk mahasiswa Matematika.",
-    logo: "/images/Logo FMI hitam.png",
-    instagramLink: "https://instagram.com/fmiunnes",
+      "Lembaga dakwah jurusan yang menjadi ruang syiar, pembinaan, dan kebersamaan mahasiswa muslim Ilmu Komputer.",
+    logo: "/images/logo/alhusna.png",
   },
   {
-    name: "LDJ Fisika",
+    name: "SKI",
+    department: "Kimia",
     description:
-      "Berfokus pada penguatan karakter muslim serta kolaborasi kegiatan keilmuan dan sosial di jurusan Fisika.",
-    logo: "/images/Logo FMI hitam.png",
-    instagramLink: "https://instagram.com/fmiunnes",
+      "Ruang dakwah jurusan yang menguatkan keilmuan, ukhuwah, dan pembinaan mahasiswa muslim di Kimia.",
+    logo: "/images/logo/ski.png",
   },
   {
-    name: "LDJ Kimia",
+    name: "Familia",
+    department: "Biologi",
     description:
-      "Mendorong kaderisasi dan sinergi lintas angkatan melalui kegiatan pembinaan serta syiar kampus.",
-    logo: "/images/Logo FMI hitam.png",
-    instagramLink: "https://instagram.com/fmiunnes",
+      "Komunitas dakwah jurusan yang membersamai mahasiswa muslim Biologi melalui kegiatan yang hangat dan bertumbuh.",
+    logo: "/images/logo/familia.png",
+  },
+  {
+    name: "FKIF",
+    department: "Fisika",
+    description:
+      "Wadah pembinaan dan penguatan karakter muslim bagi mahasiswa Fisika melalui gerak dakwah yang kontekstual.",
+    logo: "/images/logo/fkif.png",
+  },
+  {
+    name: "SIGMA",
+    department: "Matematika",
+    description:
+      "Jaringan dakwah mahasiswa Matematika yang menghadirkan pembinaan, syiar, dan semangat kebermanfaatan bersama.",
+    logo: "/images/logo/sigma.png",
+  },
+  {
+    name: "MORSE",
+    department: "Ilmu Lingkungan",
+    description:
+      "Ruang gerak dakwah jurusan yang menguatkan kepedulian, pembinaan, dan ukhuwah mahasiswa muslim Ilmu Lingkungan.",
+    logo: "/images/logo/morse.png",
   },
 ];
 

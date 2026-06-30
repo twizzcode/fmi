@@ -38,6 +38,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const rewriteUrl = new URL(`/admin-space${nextUrl.pathname}`, request.url)
+  rewriteUrl.search = nextUrl.search
   return NextResponse.rewrite(rewriteUrl)
 }
 

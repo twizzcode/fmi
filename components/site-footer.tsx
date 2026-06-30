@@ -11,7 +11,7 @@ import {
 const companyLinks = [
   { label: "Beranda", href: "/" },
   { label: "Tentang FMI", href: "/tentang-fmiunnes" },
-  { label: "Susunan Pengurus", href: "/struktur-fmiunnes" },
+  { label: "Susunan Pengurus", href: "/struktur" },
   { label: "Kontak", href: "/kontak" },
 ];
 

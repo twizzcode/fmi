@@ -22,9 +22,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { appOrigin } from "@/lib/app-config"
+import { adminOrigin, appOrigin } from "@/lib/app-config"
 import { authClient } from "@/lib/auth-client"
-import { ChevronsUpDownIcon, LogOutIcon, UserCircleIcon } from "lucide-react"
+import {
+  ChevronsUpDownIcon,
+  LayoutDashboardIcon,
+  LogOutIcon,
+  UserCircleIcon,
+} from "lucide-react"
 
 export function NavUser({
   user,
@@ -44,6 +49,11 @@ export function NavUser({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("")
+  const canAccessDashboard =
+    user.role === "staff" ||
+    user.role === "admin" ||
+    user.role === "developer" ||
+    user.role === "alumni"
 
   async function handleSignOut() {
     await authClient.signOut()
@@ -96,6 +106,15 @@ export function NavUser({
                 />
                 <span className="capitalize">{user.role}</span>
               </DropdownMenuItem>
+              {canAccessDashboard ? (
+                <DropdownMenuItem asChild>
+                  <a href={adminOrigin}>
+                    <LayoutDashboardIcon
+                    />
+                    <span>Dashboard</span>
+                  </a>
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>

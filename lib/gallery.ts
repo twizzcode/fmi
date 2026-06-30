@@ -1,12 +1,8 @@
-import { desc, inArray } from "drizzle-orm"
+import { asc, desc, eq, inArray } from "drizzle-orm"
 
-import { galleryItems as fallbackGalleryItems } from "@/lib/site-data"
+import type { ImageItem } from "@/components/ui/image-gallery"
 import { db, schema } from "@/lib/db"
-import {
-  isSupabaseStorageConfigured,
-  supabaseStorageBucket,
-} from "@/lib/supabase/config"
-import { createSupabaseAdminClient } from "@/lib/supabase/server"
+import { createSignedStorageUrl } from "@/lib/supabase/storage"
 
 export type GalleryVisual = {
   id: string
@@ -16,130 +12,160 @@ export type GalleryVisual = {
   category?: string
 }
 
-export type AdminGalleryItem = {
-  id: string | null
-  name: string
+export type GalleryPhotoView = {
+  id: string
   path: string
-  signedUrl: string | null
-  updatedAt: string | null
-  eventDate: Date | null
-  eventDateLabel: string | null
-  eventDateValue: string
+  url: string | null
+  alt: string
+  sortOrder: number
 }
 
-const galleryPrefix = "galeri"
+export type GalleryActivity = {
+  id: string
+  title: string
+  eventDate: Date
+  eventDateLabel: string
+  eventDateValue: string
+  coverImageUrl: string | null
+  photoCount: number
+  photos: GalleryPhotoView[]
+  status: string
+}
 
 export async function getGalleryVisuals(limit = 24): Promise<GalleryVisual[]> {
-  if (isSupabaseStorageConfigured()) {
-    const items = await getStorageGalleryVisuals(limit).catch(() => [])
+  const activities = (await getGalleryActivities().catch(() => [])).filter(
+    (activity) => activity.status === "approved"
+  )
+  const visuals = activities
+    .flatMap((activity) =>
+      activity.photos
+        .filter((photo) => photo.url)
+        .map((photo) => ({
+          id: photo.id,
+          src: photo.url ?? "",
+          alt: photo.alt,
+          title: activity.title,
+        }))
+    )
+    .slice(0, limit)
 
-    if (items.length > 0) {
-      return items
-    }
-  }
-
-  return fallbackGalleryItems.map((item, index) => ({
-    id: `fallback-${index}`,
-    src: item.image,
-    alt: item.title,
-    title: item.title,
-    category: item.category,
-  }))
+  return visuals
 }
 
-export async function getAdminGalleryItems(
-  limit = 48
-): Promise<AdminGalleryItem[]> {
-  if (!isSupabaseStorageConfigured()) {
+export async function getGalleryActivities(userId?: string): Promise<GalleryActivity[]> {
+  const entries = await db
+    .select()
+    .from(schema.galleryEntries)
+    .where(userId ? eq(schema.galleryEntries.userId, userId) : undefined)
+    .orderBy(desc(schema.galleryEntries.eventDate), desc(schema.galleryEntries.createdAt))
+
+  if (entries.length === 0) {
     return []
   }
 
-  const supabase = createSupabaseAdminClient()
-  const { data, error } = await supabase.storage
-    .from(supabaseStorageBucket)
-    .list(galleryPrefix, {
-      limit,
-      sortBy: { column: "updated_at", order: "desc" },
-    })
+  const photos = await db
+    .select()
+    .from(schema.galleryPhotos)
+    .where(
+      inArray(
+        schema.galleryPhotos.galleryEntryId,
+        entries.map((entry) => entry.id)
+      )
+    )
+    .orderBy(
+      asc(schema.galleryPhotos.galleryEntryId),
+      asc(schema.galleryPhotos.sortOrder),
+      asc(schema.galleryPhotos.createdAt)
+    )
 
-  if (error || !data) {
-    return []
+  const photoMap = new Map<string, typeof photos>()
+  for (const photo of photos) {
+    const existing = photoMap.get(photo.galleryEntryId) ?? []
+    existing.push(photo)
+    photoMap.set(photo.galleryEntryId, existing)
   }
 
-  const files = data.filter((item) => item.name && !item.id?.endsWith("/"))
-  const objectPaths = files.map((item) => `${galleryPrefix}/${item.name}`)
-
-  const metadata =
-    objectPaths.length > 0
-      ? await db
-          .select()
-          .from(schema.galleryEntries)
-          .where(inArray(schema.galleryEntries.storagePath, objectPaths))
-      : []
-
-  const metadataByPath = new Map(
-    metadata.map((item) => [item.storagePath, item] as const)
+  const uniquePaths = Array.from(
+    new Set([
+      ...entries.map((entry) => entry.storagePath),
+      ...photos.map((photo) => photo.storagePath),
+    ])
   )
 
-  const items = await Promise.all(
-    files.map(async (item) => {
-      const objectPath = `${galleryPrefix}/${item.name}`
-      const metadataItem = metadataByPath.get(objectPath) ?? null
-
-      const { data: signedData } = await supabase.storage
-        .from(supabaseStorageBucket)
-        .createSignedUrl(objectPath, 60 * 60)
-
-      return {
-        id: metadataItem?.id ?? null,
-        name: item.name,
-        path: objectPath,
-        signedUrl: signedData?.signedUrl ?? null,
-        updatedAt: item.updated_at ?? null,
-        eventDate: metadataItem?.eventDate ?? null,
-        eventDateLabel: metadataItem?.eventDate
-          ? formatGalleryDate(metadataItem.eventDate)
-          : null,
-        eventDateValue: metadataItem?.eventDate
-          ? metadataItem.eventDate.toISOString().slice(0, 10)
-          : "",
+  const signedUrlMap = new Map<string, string | null>()
+  await Promise.all(
+    uniquePaths.map(async (path) => {
+      try {
+        const url = await createSignedStorageUrl(path)
+        signedUrlMap.set(path, url)
+      } catch {
+        signedUrlMap.set(path, null)
       }
     })
   )
 
-  return items.sort((left, right) => {
-    const leftTime = left.eventDate?.getTime() ?? 0
-    const rightTime = right.eventDate?.getTime() ?? 0
+  return entries.map((entry) => {
+    const entryPhotos = photoMap.get(entry.id) ?? []
+    const normalizedPhotos =
+      entryPhotos.length > 0
+        ? entryPhotos
+        : [
+            {
+              id: `legacy-${entry.id}`,
+              galleryEntryId: entry.id,
+              storagePath: entry.storagePath,
+              sortOrder: 0,
+              createdAt: entry.createdAt,
+            },
+          ]
 
-    if (leftTime !== rightTime) {
-      return rightTime - leftTime
+    return {
+      id: entry.id,
+      title: entry.title,
+      eventDate: entry.eventDate,
+      eventDateLabel: formatGalleryDate(entry.eventDate),
+      eventDateValue: entry.eventDate.toISOString().slice(0, 10),
+      coverImageUrl: signedUrlMap.get(entry.storagePath) ?? null,
+      photoCount: normalizedPhotos.length,
+      status: entry.status ?? "approved",
+      photos: normalizedPhotos.map((photo, index) => ({
+        id: photo.id,
+        path: photo.storagePath,
+        url: signedUrlMap.get(photo.storagePath) ?? null,
+        alt: `${entry.title} ${index + 1}`,
+        sortOrder: photo.sortOrder,
+      })),
     }
-
-    const leftUpdated = left.updatedAt ? new Date(left.updatedAt).getTime() : 0
-    const rightUpdated = right.updatedAt ? new Date(right.updatedAt).getTime() : 0
-
-    return rightUpdated - leftUpdated
   })
 }
 
-export async function getGalleryEntries() {
-  return db
-    .select()
-    .from(schema.galleryEntries)
-    .orderBy(desc(schema.galleryEntries.eventDate))
-}
+export async function getGalleryPageActivities(): Promise<
+  Array<{
+    id: string
+    title: string
+    dateISO: string
+    formattedDate: string
+    images: ImageItem[]
+  }>
+> {
+  const activities = (await getGalleryActivities().catch(() => [])).filter(
+    (activity) => activity.status === "approved"
+  )
 
-async function getStorageGalleryVisuals(limit: number): Promise<GalleryVisual[]> {
-  const items = await getAdminGalleryItems(limit)
-
-  return items
-    .filter((item) => item.signedUrl)
-    .map((item) => ({
-      id: item.id ?? item.path,
-      src: item.signedUrl ?? "",
-      alt: item.name,
-      title: item.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]/g, " "),
+  return activities
+    .map((activity) => ({
+      id: activity.id,
+      title: activity.title,
+      dateISO: activity.eventDateValue,
+      formattedDate: activity.eventDateLabel,
+      images: activity.photos
+        .filter((photo) => photo.url)
+        .map<ImageItem>((photo) => ({
+          src: photo.url ?? "",
+          alt: photo.alt,
+        })),
     }))
+    .filter((activity) => activity.images.length > 0)
 }
 
 function formatGalleryDate(date: Date) {

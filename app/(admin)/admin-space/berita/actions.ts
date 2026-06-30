@@ -26,10 +26,8 @@ type ParsedNewsFields =
       slug: string
       excerpt: string
       category: string
-      author: string
       bodyJson: string
       status: NewsStatus
-      views: number
       publishedAt: Date
       image: FormDataEntryValue | null
     }
@@ -38,8 +36,14 @@ export async function createNewsArticleAction(
   _previousState: NewsActionState,
   formData: FormData
 ): Promise<NewsActionState> {
-  const authResult = await requireAdminSession()
-  if (authResult) return authResult
+  const requestHeaders = await headers()
+  const session = await auth.api.getSession({
+    headers: requestHeaders,
+  })
+
+  if (!session || !canAccessAdmin(session.user.role)) {
+    return { error: "Unauthorized", success: null }
+  }
 
   const parsed = parseNewsFields(formData)
   if (isNewsActionState(parsed)) return parsed
@@ -72,15 +76,17 @@ export async function createNewsArticleAction(
 
     await db.insert(schema.newsArticles).values({
       id: randomUUID(),
+      userId: session.user.id,
       title: parsed.title,
       slug: parsed.slug,
       excerpt: parsed.excerpt,
       category: parsed.category,
-      author: parsed.author,
+      author: session.user.name,
       imagePath,
       bodyJson: parsed.bodyJson,
-      status: parsed.status,
-      views: parsed.views,
+        status: "draft",
+
+      views: 0,
       publishedAt: parsed.publishedAt,
     })
 
@@ -160,11 +166,10 @@ export async function updateNewsArticleAction(
         slug: parsed.slug,
         excerpt: parsed.excerpt,
         category: parsed.category,
-        author: parsed.author,
         imagePath,
         bodyJson: parsed.bodyJson,
-        status: parsed.status,
-        views: parsed.views,
+      status: "draft",
+
         publishedAt: parsed.publishedAt,
       })
       .where(eq(schema.newsArticles.id, existing.id))
@@ -210,8 +215,8 @@ export async function deleteNewsArticleAction(
   }
 
   try {
+    await deleteStorageObject(existing.imagePath)
     await db.delete(schema.newsArticles).where(eq(schema.newsArticles.id, existing.id))
-    await deleteStorageObject(existing.imagePath).catch(() => undefined)
     revalidateNewsPaths(existing.slug)
 
     return {
@@ -231,11 +236,9 @@ function parseNewsFields(formData: FormData): ParsedNewsFields {
   const slug = formData.get("slug")
   const excerpt = formData.get("excerpt")
   const category = formData.get("category")
-  const author = formData.get("author")
   const bodyJson = formData.get("bodyJson")
   const statusValue = formData.get("status")
   const publishedAtValue = formData.get("publishedAt")
-  const viewsValue = formData.get("views")
   const image = formData.get("image")
 
   if (typeof title !== "string" || !title.trim()) {
@@ -249,9 +252,6 @@ function parseNewsFields(formData: FormData): ParsedNewsFields {
   }
   if (typeof category !== "string" || !category.trim()) {
     return { error: "Kategori berita wajib diisi.", success: null }
-  }
-  if (typeof author !== "string" || !author.trim()) {
-    return { error: "Penulis berita wajib diisi.", success: null }
   }
   if (typeof bodyJson !== "string" || !bodyJson.trim()) {
     return { error: "Isi inti berita wajib diisi.", success: null }
@@ -268,22 +268,14 @@ function parseNewsFields(formData: FormData): ParsedNewsFields {
     return { error: "Tanggal publikasi tidak valid.", success: null }
   }
 
-  const views =
-    typeof viewsValue === "string" && viewsValue.trim() ? Number(viewsValue) : 0
-  if (Number.isNaN(views)) {
-    return { error: "Jumlah views harus berupa angka.", success: null }
-  }
-
   return {
     title: title.trim(),
     slug: slug.trim(),
     excerpt: excerpt.trim(),
     category: category.trim(),
-    author: author.trim(),
     bodyJson: bodyJson.trim(),
     status: statusValue,
     publishedAt,
-    views,
     image,
   }
 }

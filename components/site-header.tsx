@@ -24,7 +24,7 @@ const navItems = [
 
 const aboutItems = [
   { href: "/tentang-fmiunnes", label: "Tentang FMI" },
-  { href: "/struktur-fmiunnes", label: "Struktur Organisasi" },
+  { href: "/struktur", label: "Struktur Organisasi" },
   { href: "/tentang-ldj", label: "Tentang LDJ" },
 ];
 
@@ -41,7 +41,10 @@ export function SiteHeader() {
   const userEmail = user?.email || "";
   const userRole = user?.role;
   const canAccessDashboard =
-    userRole === "admin" || userRole === "developer";
+    userRole === "staff" ||
+    userRole === "admin" ||
+    userRole === "developer" ||
+    userRole === "alumni";
   const userInitials = userName
     .split(/\s+/)
     .filter(Boolean)
