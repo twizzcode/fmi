@@ -137,8 +137,9 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
       const nextUploadedImages: UploadedImage[] = []
 
       for (const file of selectedFiles) {
+        const optimizedFile = await optimizeImageBeforeUpload(file)
         const body = new FormData()
-        body.set("file", file)
+        body.set("file", optimizedFile)
 
         const response = await fetch("/api/admin/storage/upload", {
           method: "POST",
@@ -278,7 +279,7 @@ export default function EditGaleriPage({ params }: EditGaleriPageProps) {
                 disabled={isUploading}
               />
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                Bisa upload banyak foto sekaligus untuk satu kegiatan galeri. Maksimal 10 foto. Format: PNG, JPG, WEBP, GIF.
+                Bisa upload banyak foto sekaligus untuk satu kegiatan galeri. Maksimal 10 foto. Format: PNG, JPG, WEBP, GIF. File akan dikompres ke WebP di browser sebelum diupload.
               </p>
 
               <div className="mt-4 space-y-4">
@@ -442,4 +443,60 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   )
+}
+
+async function optimizeImageBeforeUpload(file: File) {
+  if (file.type === "image/gif") {
+    return file
+  }
+
+  const image = await loadImage(file)
+  const maxSize = 2200
+  const scale = Math.min(1, maxSize / image.width, maxSize / image.height)
+  const width = Math.max(1, Math.round(image.width * scale))
+  const height = Math.max(1, Math.round(image.height * scale))
+  const canvas = document.createElement("canvas")
+  canvas.width = width
+  canvas.height = height
+
+  const context = canvas.getContext("2d")
+
+  if (!context) {
+    throw new Error("Browser tidak mendukung kompresi gambar.")
+  }
+
+  context.drawImage(image, 0, 0, width, height)
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/webp", 0.82)
+  })
+
+  if (!blob) {
+    throw new Error("Gagal mengubah gambar ke WebP.")
+  }
+
+  const fileName = file.name.replace(/\.[^.]+$/, "") || "gallery-image"
+
+  return new File([blob], `${fileName}.webp`, {
+    type: "image/webp",
+    lastModified: file.lastModified,
+  })
+}
+
+async function loadImage(file: File) {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new window.Image()
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error("Gagal membaca gambar."))
+      image.src = objectUrl
+    })
+
+    return image
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
