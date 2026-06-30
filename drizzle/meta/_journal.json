@@ -141,6 +141,13 @@
       "when": 1782796718553,
       "tag": "0019_tough_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782818350784,
+      "tag": "0020_bizarre_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

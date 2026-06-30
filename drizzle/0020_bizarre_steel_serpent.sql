@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "uploaded_image_path" text;

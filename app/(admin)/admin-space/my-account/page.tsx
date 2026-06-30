@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import { UpdateProfileForm } from "@/components/admin/update-profile-form"
 import { auth } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
+import { resolveUserImage } from "@/lib/user-image"
 
 export default async function MyAccountPage() {
   const session = await auth.api.getSession({
@@ -23,6 +24,8 @@ export default async function MyAccountPage() {
     redirect("/login")
   }
 
+  const imageUrl = await resolveUserImage(user)
+
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -38,7 +41,7 @@ export default async function MyAccountPage() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <UpdateProfileForm user={user} />
+        <UpdateProfileForm user={{ ...user, image: imageUrl }} />
       </section>
     </div>
   )

@@ -28,7 +28,11 @@ const aboutItems = [
   { href: "/tentang-ldj", label: "Tentang LDJ" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({
+  initialUserImage,
+}: {
+  initialUserImage?: string | null
+}) {
   const [open, setOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -37,6 +41,7 @@ export function SiteHeader() {
   const { data: session, isPending } = authClient.useSession();
   const isAboutActive = aboutItems.some((item) => item.href === pathname);
   const user = session?.user;
+  const userImage = user?.image || initialUserImage || null;
   const userName = user?.name?.trim() || "Pengguna FMI";
   const userEmail = user?.email || "";
   const userRole = user?.role;
@@ -172,9 +177,9 @@ export function SiteHeader() {
           {!isPending && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50">
-                {user.image ? (
+                {userImage ? (
                   <img
-                    src={user.image}
+                    src={userImage}
                     alt={userName}
                     className="h-full w-full rounded-full object-cover"
                   />
@@ -320,9 +325,9 @@ export function SiteHeader() {
               {!isPending && user ? (
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-3">
-                    {user.image ? (
+                    {userImage ? (
                       <img
-                        src={user.image}
+                        src={userImage}
                         alt={userName}
                         className="h-10 w-10 rounded-full object-cover"
                       />

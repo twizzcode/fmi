@@ -15,12 +15,14 @@ type User = {
   name: string
   email: string
   image: string | null
+  uploadedImagePath?: string | null
   role: string
 }
 
 export function UpdateProfileForm({ user }: { user: User }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [isResettingImage, setIsResettingImage] = useState(false)
   const [name, setName] = useState(user.name)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(user.image)
@@ -34,6 +36,28 @@ export function UpdateProfileForm({ user }: { user: User }) {
         setPreviewUrl(reader.result as string)
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  const handleResetUploadedImage = async () => {
+    setIsResettingImage(true)
+
+    try {
+      const response = await fetch("/api/admin/profile", {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to reset profile image")
+      }
+
+      setImageFile(null)
+      toast.success("Foto upload berhasil dihapus")
+      router.refresh()
+    } catch {
+      toast.error("Gagal menghapus foto upload")
+    } finally {
+      setIsResettingImage(false)
     }
   }
 
@@ -59,7 +83,7 @@ export function UpdateProfileForm({ user }: { user: User }) {
 
       toast.success("Profil berhasil diupdate")
       router.refresh()
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengupdate profil")
     } finally {
       setIsLoading(false)
@@ -87,6 +111,22 @@ export function UpdateProfileForm({ user }: { user: User }) {
           <p className="mt-1 text-sm text-slate-500">
             Format: JPG, PNG (Max 2MB)
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => {
+              setImageFile(null)
+              setPreviewUrl(user.image)
+            }} disabled={isLoading || isResettingImage}>
+              Reset Preview
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleResetUploadedImage}
+              disabled={!user.uploadedImagePath || isLoading || isResettingImage}
+            >
+              {isResettingImage ? "Menghapus..." : "Hapus Foto Upload"}
+            </Button>
+          </div>
         </div>
       </div>
 

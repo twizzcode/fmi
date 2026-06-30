@@ -3,6 +3,7 @@ import { and, desc, eq, ne } from "drizzle-orm"
 import { db, schema } from "@/lib/db"
 import { createSignedStorageUrl } from "@/lib/supabase/storage"
 import type { NewsStatus } from "@/lib/db/schema"
+import { resolveUserImage } from "@/lib/user-image"
 
 export type NewsArticle = {
   id: string
@@ -27,6 +28,7 @@ export async function getNewsArticles() {
     .select({
       article: schema.newsArticles,
       authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
     })
     .from(schema.newsArticles)
     .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
@@ -46,6 +48,7 @@ export async function getNewsArticleBySlug(slug: string) {
     .select({
       article: schema.newsArticles,
       authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
     })
     .from(schema.newsArticles)
     .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
@@ -69,6 +72,7 @@ export async function getRelatedNewsArticles(slug: string, limit = 3) {
     .select({
       article: schema.newsArticles,
       authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
     })
     .from(schema.newsArticles)
     .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
@@ -98,6 +102,7 @@ export async function getAdminNewsArticles(userId?: string) {
     .select({
       article: schema.newsArticles,
       authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
     })
     .from(schema.newsArticles)
     .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
@@ -146,9 +151,11 @@ export function createBodyJsonFromParagraphs(paragraphs: string[]) {
 async function mapDbNewsArticle({
   article,
   authorImage,
+  authorUploadedImagePath,
 }: {
   article: typeof schema.newsArticles.$inferSelect
   authorImage: string | null
+  authorUploadedImagePath: string | null
 }): Promise<NewsArticle> {
   let imageUrl = article.imagePath
 
@@ -158,6 +165,11 @@ async function mapDbNewsArticle({
     imageUrl = article.imagePath
   }
 
+  const authorImageUrl = await resolveUserImage({
+    image: authorImage,
+    uploadedImagePath: authorUploadedImagePath,
+  })
+
   return {
     id: article.id,
     slug: article.slug,
@@ -165,7 +177,7 @@ async function mapDbNewsArticle({
     excerpt: article.excerpt,
     category: article.category,
     author: article.author,
-    authorImageUrl: authorImage,
+    authorImageUrl,
     imagePath: article.imagePath,
     imageUrl,
     bodyJson: article.bodyJson,

@@ -10,6 +10,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { eq } from "drizzle-orm"
+
 import { auth } from "@/lib/auth"
 import {
   adminOrigin,
@@ -17,6 +19,8 @@ import {
   canAccessAdmin,
   isAdminHost,
 } from "@/lib/app-config"
+import { db, schema } from "@/lib/db"
+import { resolveUserImage } from "@/lib/user-image"
 
 export default async function AdminLayout({
   children,
@@ -40,6 +44,11 @@ export default async function AdminLayout({
     redirect(adminOrigin)
   }
 
+  const user = await db.query.users.findFirst({
+    where: eq(schema.users.id, session.user.id),
+  })
+  const avatar = user ? await resolveUserImage(user) : session.user.image ?? ""
+
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -47,7 +56,7 @@ export default async function AdminLayout({
           user={{
             name: session.user.name,
             email: session.user.email,
-            avatar: session.user.image ?? "",
+            avatar: avatar ?? "",
             role: session.user.role,
           }}
         />
