@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { LoginForm } from "@/components/login-form"
 
@@ -9,7 +10,9 @@ export default function LoginPage() {
           <div className="absolute inset-x-0 top-0 h-1.5 bg-[#3f679c]" />
           <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-[radial-gradient(circle,_rgba(63,103,156,0.16),_transparent_68%)]" />
           <CardContent className="relative p-8 md:p-10">
-            <LoginForm />
+            <Suspense fallback={<div>Loading...</div>}>
+              <LoginForm />
+            </Suspense>
           </CardContent>
         </Card>
       </div>
