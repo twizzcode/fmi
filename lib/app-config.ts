@@ -11,8 +11,11 @@ export const adminHost = new URL(adminUrl).host
 
 export const authBaseUrl = process.env.BETTER_AUTH_URL ?? appOrigin
 export const authTrustedOrigins = [
-  appOrigin,
-  adminOrigin,
+    "http://lvh.me:3000",
+    "http://admin.lvh.me:3000",
+    "https://fmiunnes.com",
+    "https://www.fmiunnes.com",
+    "https://admin.fmiunnes.com",
 ]
 
 export const cookieDomain =
