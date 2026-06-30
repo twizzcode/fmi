@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeftIcon } from "@radix-ui/react-icons"
@@ -6,10 +7,58 @@ import { notFound } from "next/navigation"
 import { NewsBodyViewer } from "@/components/news/news-body-viewer"
 import { NewsViewTracker } from "@/components/news/news-view-tracker"
 import { BlurFade } from "@/components/ui/blur-fade"
+import { createAppUrl } from "@/lib/app-config"
 import { getNewsArticleBySlug, getNewsArticleSlugs, getRelatedNewsArticles } from "@/lib/news"
 
 export function generateStaticParams() {
   return getNewsArticleSlugs().then((slugs) => slugs.map((slug) => ({ slug })))
+}
+
+export async function generateMetadata(
+  props: PageProps<"/berita/[slug]">
+): Promise<Metadata> {
+  const { slug } = await props.params
+  const article = await getNewsArticleBySlug(slug)
+
+  if (!article) {
+    return {
+      title: "Berita",
+      description: "Baca berita terbaru FMI FMIPA UNNES.",
+    }
+  }
+
+  const canonical = `/berita/${article.slug}`
+  const imageUrl = article.imageUrl.startsWith("http")
+    ? article.imageUrl
+    : createAppUrl(article.imageUrl).toString()
+
+  return {
+    title: article.title,
+    description: article.excerpt,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      title: article.title,
+      description: article.excerpt,
+      publishedTime: article.publishedAt.toISOString(),
+      authors: [article.author],
+      images: [
+        {
+          url: imageUrl,
+          alt: article.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.excerpt,
+      images: [imageUrl],
+    },
+  }
 }
 
 export default async function NewsDetailPage(

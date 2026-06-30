@@ -1,8 +1,31 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { PageHero } from "@/components/page-hero"
 import { StructurePageContent } from "@/components/structure-page-content"
 import { getStructureCabinetPageData } from "@/lib/structure"
+
+export async function generateMetadata(
+  props: PageProps<"/struktur/[id]">
+): Promise<Metadata> {
+  const { id } = await props.params
+  const { currentCabinet } = await getStructureCabinetPageData(id)
+
+  if (!currentCabinet) {
+    return {
+      title: "Struktur FMI",
+      description: "Lihat struktur pengurus FMI FMIPA UNNES.",
+    }
+  }
+
+  return {
+    title: `Struktur ${currentCabinet.name}`,
+    description: `Lihat struktur pengurus ${currentCabinet.name} di FMI FMIPA UNNES.`,
+    alternates: {
+      canonical: `/struktur/${currentCabinet.id}`,
+    },
+  }
+}
 
 export default async function StructureCabinetPage(props: PageProps<"/struktur/[id]">) {
   const { id } = await props.params

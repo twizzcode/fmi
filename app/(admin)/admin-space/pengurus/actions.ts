@@ -140,7 +140,6 @@ export async function saveStructureAction(
 
     revalidatePath("/admin-space/pengurus")
     revalidatePath("/struktur")
-    revalidatePath("/struktur-fmiunnes")
 
     return {
       error: null,

@@ -1,8 +1,17 @@
+import type { Metadata } from "next"
 import Image from "next/image";
 import { PageHero } from "@/components/page-hero";
 import { Card, CardContent } from "@/components/ui/card";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { ldjItems } from "@/lib/site-data";
+
+export const metadata: Metadata = {
+  title: "Tentang LDJ",
+  description: "Pelajari peran Lembaga Dakwah Jurusan sebagai jaringan dakwah yang bergerak bersama FMI FMIPA UNNES.",
+  alternates: {
+    canonical: "/tentang-ldj",
+  },
+}
 
 export default function AboutLdjPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,6 +12,14 @@ import { getLatestNewsArticles } from "@/lib/news";
 import { BlurFade } from "@/components/ui/blur-fade";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+export const metadata: Metadata = {
+  title: "Beranda",
+  description: "Forum Mahasiswa Islam FMIPA UNNES hadir sebagai wadah ukhuwah, pembinaan, dan informasi kegiatan mahasiswa muslim di FMIPA UNNES.",
+  alternates: {
+    canonical: "/",
+  },
+}
 
 function getAuthorInitials(name: string) {
   return name
@@ -184,61 +193,66 @@ export default async function Home() {
         </BlurFade>
 
         <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-          {latestNews.map((item, index) => (
-            <BlurFade
-              key={item.title}
-              inView
-              delay={0.05 + index * 0.07}
-              className="h-full"
-            >
-              <Link href={`/berita/${item.slug}`} className="group block h-full">
-                <article className="flex h-full flex-col">
-                  <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover transition duration-300 group-hover:scale-105"
-                    />
-                  </div>
+          {latestNews.length === 0 ? (
+            <p className="text-sm text-slate-500">Kosong</p>
+          ) : (
+            latestNews.map((item, index) => (
+              <BlurFade
+                key={item.title}
+                inView
+                delay={0.05 + index * 0.07}
+                className="h-full"
+              >
+                <Link href={`/berita/${item.slug}`} className="group block h-full">
+                  <article className="flex h-full flex-col">
+                    <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        className="object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </div>
 
-                  <div className="flex flex-1 flex-col pt-6">
-                    <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      {item.category}
-                    </span>
+                    <div className="flex flex-1 flex-col pt-6">
+                      <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {item.category}
+                      </span>
 
-                    <h3 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c]">
-                      {item.title}
-                    </h3>
+                      <h3 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c]">
+                        {item.title}
+                      </h3>
 
-                    <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
-                      {item.excerpt}
-                    </p>
+                      <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
+                        {item.excerpt}
+                      </p>
 
-                    <div className="mt-6 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-slate-200 bg-white">
-                          <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
-                          <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
-                            {getAuthorInitials(item.author)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-xs font-medium text-slate-900">
-                            {item.author}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {item.date} · {item.views.toLocaleString("id-ID")} dibaca
-                          </p>
+                      <div className="mt-6 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border border-slate-200 bg-white">
+                            <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
+                            <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
+                              {getAuthorInitials(item.author)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-xs font-medium text-slate-900">
+                              {item.author}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {item.date} · {item.views.toLocaleString("id-ID")} dibaca
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              </Link>
-            </BlurFade>
-          ))}
+                  </article>
+                </Link>
+              </BlurFade>
+            ))
+          )}
         </div>
+
       </section>
 
       <section className="mx-auto max-w-7xl px-6 pb-20 md:pb-28">

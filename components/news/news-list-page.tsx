@@ -141,110 +141,116 @@ export function NewsListPage({ items }: { items: NewsArticle[] }) {
         </BlurFade>
 
         <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-          {visibleNews.map((item, index) => (
-            <BlurFade key={`${item.slug}-${page}`} inView delay={0.05 + index * 0.06} className="h-full">
-              <Link href={`/berita/${item.slug}`} className="group block h-full">
-                <article className="flex h-full flex-col">
-                  <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover transition duration-300 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col pt-6">
-                    <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      {item.category}
-                    </span>
-                    <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c]">
-                      {item.title}
-                    </h2>
-                    <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
-                      {item.excerpt}
-                    </p>
-                    <div className="mt-6 flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border border-slate-200 bg-white">
-                        <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
-                        <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
-                          {getAuthorInitials(item.author)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-xs font-medium text-slate-900">{item.author}</p>
-                        <p className="text-xs text-slate-500">
-                          {item.date} · {item.views.toLocaleString("id-ID")} dibaca
-                        </p>
+          {visibleNews.length === 0 ? (
+            <p className="text-sm text-slate-500">Kosong</p>
+          ) : (
+            visibleNews.map((item, index) => (
+              <BlurFade key={`${item.slug}-${page}`} inView delay={0.05 + index * 0.06} className="h-full">
+                <Link href={`/berita/${item.slug}`} className="group block h-full">
+                  <article className="flex h-full flex-col">
+                    <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        className="object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col pt-6">
+                      <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {item.category}
+                      </span>
+                      <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c]">
+                        {item.title}
+                      </h2>
+                      <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
+                        {item.excerpt}
+                      </p>
+                      <div className="mt-6 flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-slate-200 bg-white">
+                          <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
+                          <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
+                            {getAuthorInitials(item.author)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-xs font-medium text-slate-900">{item.author}</p>
+                          <p className="text-xs text-slate-500">
+                            {item.date} · {item.views.toLocaleString("id-ID")} dibaca
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </article>
-              </Link>
-            </BlurFade>
-          ))}
+                  </article>
+                </Link>
+              </BlurFade>
+            ))
+          )}
         </div>
 
-        <BlurFade inView delay={0.18}>
-          <Pagination className="mt-14">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  text="Sebelumnya"
-                  className="rounded-full text-slate-500 hover:text-[#3f679c]"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    setPage((current) => Math.max(1, current - 1))
-                  }}
-                />
-              </PaginationItem>
-
-              {currentPage > 2 && totalPages > 3 ? (
+        {visibleNews.length > 0 ? (
+          <BlurFade inView delay={0.18}>
+            <Pagination className="mt-14">
+              <PaginationContent>
                 <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : null}
-
-              {pageNumbers.map((pageNumber) => (
-                <PaginationItem key={pageNumber}>
-                  <PaginationLink
+                  <PaginationPrevious
                     href="#"
-                    isActive={pageNumber === currentPage}
-                    className={
-                      pageNumber === currentPage
-                        ? "rounded-full border-[#3f679c] bg-[#3f679c] !text-white hover:bg-[#355887] hover:!text-white"
-                        : "rounded-full text-slate-600 hover:text-[#3f679c]"
-                    }
+                    text="Sebelumnya"
+                    className="rounded-full text-slate-500 hover:text-[#3f679c]"
                     onClick={(event) => {
                       event.preventDefault()
-                      setPage(pageNumber)
+                      setPage((current) => Math.max(1, current - 1))
                     }}
-                  >
-                    {pageNumber}
-                  </PaginationLink>
+                  />
                 </PaginationItem>
-              ))}
 
-              {currentPage < totalPages - 1 && totalPages > 3 ? (
+                {currentPage > 2 && totalPages > 3 ? (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : null}
+
+                {pageNumbers.map((pageNumber) => (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === currentPage}
+                      className={
+                        pageNumber === currentPage
+                          ? "rounded-full border-[#3f679c] bg-[#3f679c] !text-white hover:bg-[#355887] hover:!text-white"
+                          : "rounded-full text-slate-600 hover:text-[#3f679c]"
+                      }
+                      onClick={(event) => {
+                        event.preventDefault()
+                        setPage(pageNumber)
+                      }}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                {currentPage < totalPages - 1 && totalPages > 3 ? (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : null}
+
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <PaginationNext
+                    href="#"
+                    text="Berikutnya"
+                    className="rounded-full text-slate-500 hover:text-[#3f679c]"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      setPage((current) => Math.min(totalPages, current + 1))
+                    }}
+                  />
                 </PaginationItem>
-              ) : null}
-
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  text="Berikutnya"
-                  className="rounded-full text-slate-500 hover:text-[#3f679c]"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    setPage((current) => Math.min(totalPages, current + 1))
-                  }}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </BlurFade>
+              </PaginationContent>
+            </Pagination>
+          </BlurFade>
+        ) : null}
       </section>
     </div>
   )

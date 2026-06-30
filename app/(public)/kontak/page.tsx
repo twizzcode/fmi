@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link";
 import { ArrowUpRight, Camera, Mail, MapPin, Users } from "lucide-react";
 import {
@@ -60,6 +61,14 @@ const channelCards = [
     span: "lg:col-span-1",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Kontak FMI",
+  description: "Hubungi FMI FMIPA UNNES untuk pertanyaan, kolaborasi, dan informasi organisasi.",
+  alternates: {
+    canonical: "/kontak",
+  },
+}
 
 export default function ContactPage() {
   return (

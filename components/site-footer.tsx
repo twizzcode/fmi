@@ -16,7 +16,7 @@ const companyLinks = [
 ];
 
 const resourceLinks = [
-  { label: "Kenali LDJ", href: "/lembaga-dakwah-jurusan" },
+  { label: "Kenali LDJ", href: "/tentang-ldj" },
   { label: "Galeri", href: "/galeri-fmiunnes" },
   { label: "Program Kerja", href: "#" },
   { label: "Kolaborasi", href: "/kontak" },

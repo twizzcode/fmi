@@ -1,7 +1,6 @@
 import { and, desc, eq, ne } from "drizzle-orm"
 
 import { db, schema } from "@/lib/db"
-import { newsItems as fallbackNewsItems } from "@/lib/site-data"
 import { createSignedStorageUrl } from "@/lib/supabase/storage"
 import type { NewsStatus } from "@/lib/db/schema"
 
@@ -24,7 +23,6 @@ export type NewsArticle = {
 }
 
 export async function getNewsArticles() {
-  const hasStoredItems = await hasStoredNewsArticles()
   const items = await db
     .select({
       article: schema.newsArticles,
@@ -35,10 +33,6 @@ export async function getNewsArticles() {
     .where(eq(schema.newsArticles.status, "published"))
     .orderBy(desc(schema.newsArticles.publishedAt))
 
-  if (items.length === 0 && !hasStoredItems) {
-    return fallbackNewsItems.map(mapFallbackNewsItem)
-  }
-
   return Promise.all(items.map(mapDbNewsArticle))
 }
 
@@ -48,7 +42,6 @@ export async function getLatestNewsArticles(limit = 3) {
 }
 
 export async function getNewsArticleBySlug(slug: string) {
-  const hasStoredItems = await hasStoredNewsArticles()
   const [item] = await db
     .select({
       article: schema.newsArticles,
@@ -65,25 +58,13 @@ export async function getNewsArticleBySlug(slug: string) {
     .limit(1)
 
   if (!item) {
-    const fallback = hasStoredItems
-      ? null
-      : fallbackNewsItems.find((entry) => entry.slug === slug)
-    return fallback ? mapFallbackNewsItem(fallback) : null
+    return null
   }
 
   return mapDbNewsArticle(item)
 }
 
 export async function getRelatedNewsArticles(slug: string, limit = 3) {
-  const hasStoredItems = await hasStoredNewsArticles()
-
-  if (!hasStoredItems) {
-    return fallbackNewsItems
-      .filter((item) => item.slug !== slug)
-      .slice(0, limit)
-      .map(mapFallbackNewsItem)
-  }
-
   const items = await db
     .select({
       article: schema.newsArticles,
@@ -104,12 +85,6 @@ export async function getRelatedNewsArticles(slug: string, limit = 3) {
 }
 
 export async function getNewsArticleSlugs() {
-  const hasStoredItems = await hasStoredNewsArticles()
-
-  if (!hasStoredItems) {
-    return fallbackNewsItems.map((item) => item.slug)
-  }
-
   const items = await db
     .select({ slug: schema.newsArticles.slug })
     .from(schema.newsArticles)
@@ -134,11 +109,6 @@ export async function getAdminNewsArticles(userId?: string) {
   }
 
   return Promise.all(items.map(mapDbNewsArticle))
-}
-
-async function hasStoredNewsArticles() {
-  const [item] = await db.select({ id: schema.newsArticles.id }).from(schema.newsArticles).limit(1)
-  return Boolean(item)
 }
 
 export function createBodyJsonFromParagraphs(paragraphs: string[]) {
@@ -204,28 +174,6 @@ async function mapDbNewsArticle({
     publishedAt: article.publishedAt,
     date: formatDate(article.publishedAt),
     dateISO: article.publishedAt.toISOString().slice(0, 10),
-  }
-}
-
-function mapFallbackNewsItem(
-  item: (typeof fallbackNewsItems)[number]
-): NewsArticle {
-  return {
-    id: item.slug,
-    slug: item.slug,
-    title: item.title,
-    excerpt: item.excerpt,
-    category: item.category,
-    author: item.author,
-    authorImageUrl: null,
-    imagePath: item.image,
-    imageUrl: item.image,
-    bodyJson: createBodyJsonFromParagraphs(item.content),
-    status: "published",
-    views: item.views,
-    publishedAt: new Date(item.dateISO),
-    date: item.date,
-    dateISO: item.dateISO,
   }
 }
 

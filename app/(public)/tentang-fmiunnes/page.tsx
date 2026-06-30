@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image";
 import { Industries1 } from "@/components/industries1";
 import { PageHero } from "@/components/page-hero";
@@ -92,6 +93,14 @@ const departmentModalContent = {
     ],
   },
 } as const;
+
+export const metadata: Metadata = {
+  title: "Tentang FMI UNNES",
+  description: "Kenali profil, visi, dan peran Forum Mahasiswa Islam FMIPA UNNES sebagai ruang pembinaan dan dakwah kampus.",
+  alternates: {
+    canonical: "/tentang-fmiunnes",
+  },
+}
 
 export default function AboutPage() {
   return (
