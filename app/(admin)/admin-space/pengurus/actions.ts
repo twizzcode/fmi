@@ -7,11 +7,16 @@ import { auth } from "@/lib/auth"
 import { canAccessAdmin } from "@/lib/app-config"
 import { db, schema } from "@/lib/db"
 import { departmentProfiles } from "@/lib/site-data"
-import { deleteStorageObject } from "@/lib/supabase/storage"
+import {
+  createSignedStorageUrl,
+  deleteStorageObject,
+  uploadImageToStorage,
+} from "@/lib/supabase/storage"
 
 export type StructureActionState = {
   error: string | null
   success: string | null
+  payload: string | null
 }
 
 type StructurePayload = {
@@ -56,7 +61,7 @@ export async function saveStructureAction(
 
   const payloadValue = formData.get("payload")
   if (typeof payloadValue !== "string" || !payloadValue.trim()) {
-    return { error: "Payload struktur tidak valid.", success: null }
+    return { error: "Payload struktur tidak valid.", success: null, payload: null }
   }
 
   let parsedPayload: unknown
@@ -64,16 +69,23 @@ export async function saveStructureAction(
   try {
     parsedPayload = JSON.parse(payloadValue)
   } catch {
-    return { error: "Format payload struktur tidak valid.", success: null }
+    return { error: "Format payload struktur tidak valid.", success: null, payload: null }
   }
 
   if (!Array.isArray(parsedPayload)) {
-    return { error: "Data kabinet harus berbentuk array.", success: null }
+    return { error: "Data kabinet harus berbentuk array.", success: null, payload: null }
   }
 
   const cabinets = normalizeStructurePayload(parsedPayload)
+  const uploadedPaths: string[] = []
 
   try {
+    const nextCabinets = await uploadStructureAssets({
+      cabinets,
+      formData,
+      uploadedPaths,
+    })
+
     const [existingCabinets, existingMembers] = await Promise.all([
       db.select().from(schema.structureCabinets),
       db.select().from(schema.structureMembers),
@@ -83,12 +95,12 @@ export async function saveStructureAction(
       await tx.delete(schema.structureMembers)
       await tx.delete(schema.structureCabinets)
 
-      if (cabinets.length === 0) {
+      if (nextCabinets.length === 0) {
         return
       }
 
       await tx.insert(schema.structureCabinets).values(
-        cabinets.map((cabinet) => ({
+        nextCabinets.map((cabinet) => ({
           id: cabinet.id,
           orderLabel: cabinet.orderLabel,
           name: cabinet.name,
@@ -99,7 +111,7 @@ export async function saveStructureAction(
         }))
       )
 
-      const members = cabinets.flatMap((cabinet) =>
+      const members = nextCabinets.flatMap((cabinet) =>
         cabinet.sections.flatMap((section) =>
           section.members.map((member) => ({
             id: member.id,
@@ -131,12 +143,14 @@ export async function saveStructureAction(
     const removedPaths = getRemovedStructureAssetPaths({
       existingCabinets,
       existingMembers,
-      nextCabinets: cabinets,
+      nextCabinets,
     })
 
     await Promise.all(
       removedPaths.map((path) => deleteStorageObject(path).catch(() => undefined))
     )
+
+    const responsePayload = await createStructureResponsePayload(nextCabinets)
 
     revalidatePath("/admin-space/pengurus")
     revalidatePath("/struktur")
@@ -144,12 +158,18 @@ export async function saveStructureAction(
     return {
       error: null,
       success: "Struktur pengurus berhasil disimpan ke database.",
+      payload: JSON.stringify(responsePayload),
     }
   } catch (error) {
+    await Promise.all(
+      uploadedPaths.map((path) => deleteStorageObject(path).catch(() => undefined))
+    )
+
     return {
       error:
         error instanceof Error ? error.message : "Gagal menyimpan struktur pengurus.",
       success: null,
+      payload: null,
     }
   }
 }
@@ -261,6 +281,86 @@ function normalizeStructurePayload(payload: unknown[]): StructurePayload[] {
   }))
 }
 
+async function uploadStructureAssets({
+  cabinets,
+  formData,
+  uploadedPaths,
+}: {
+  cabinets: StructurePayload[]
+  formData: FormData
+  uploadedPaths: string[]
+}) {
+  return Promise.all(
+    cabinets.map(async (cabinet) => {
+      let logoPath = cabinet.logoPath
+      const logoFile = formData.get(`cabinet-logo:${cabinet.id}`)
+
+      if (logoFile instanceof File && logoFile.size > 0) {
+        logoPath = await uploadImageToStorage({
+          file: logoFile,
+          folder: "pengurus/kabinet",
+        })
+        uploadedPaths.push(logoPath)
+      }
+
+      const sections = await Promise.all(
+        cabinet.sections.map(async (section) => ({
+          ...section,
+          members: await Promise.all(
+            section.members.map(async (member) => {
+              let photoPath = member.photoPath
+              const photoFile = formData.get(`member-photo:${member.id}`)
+
+              if (photoFile instanceof File && photoFile.size > 0) {
+                photoPath = await uploadImageToStorage({
+                  file: photoFile,
+                  folder: "pengurus/anggota",
+                })
+                uploadedPaths.push(photoPath)
+              }
+
+              return {
+                ...member,
+                photoPath,
+              }
+            })
+          ),
+        }))
+      )
+
+      return {
+        ...cabinet,
+        logoPath,
+        sections,
+      }
+    })
+  )
+}
+
+async function createStructureResponsePayload(cabinets: StructurePayload[]) {
+  return Promise.all(
+    cabinets.map(async (cabinet) => ({
+      ...cabinet,
+      logoPreviewUrl: cabinet.logoPath
+        ? await createSignedStorageUrl(cabinet.logoPath).catch(() => cabinet.logoPath)
+        : "",
+      sections: await Promise.all(
+        cabinet.sections.map(async (section) => ({
+          ...section,
+          members: await Promise.all(
+            section.members.map(async (member) => ({
+              ...member,
+              photoPreviewUrl: member.photoPath
+                ? await createSignedStorageUrl(member.photoPath).catch(() => member.photoPath)
+                : "",
+            }))
+          ),
+        }))
+      ),
+    }))
+  )
+}
+
 async function requireAdminSession(): Promise<StructureActionState | null> {
   const requestHeaders = await headers()
   const session = await auth.api.getSession({
@@ -268,7 +368,7 @@ async function requireAdminSession(): Promise<StructureActionState | null> {
   })
 
   if (!session || !canAccessAdmin(session.user.role)) {
-    return { error: "Unauthorized", success: null }
+    return { error: "Unauthorized", success: null, payload: null }
   }
 
   return null

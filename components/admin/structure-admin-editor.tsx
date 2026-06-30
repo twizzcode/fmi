@@ -1,9 +1,8 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useActionState, useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
-import { useFormStatus } from "react-dom"
 import {
   ImageUpIcon,
   PencilIcon,
@@ -61,6 +60,7 @@ type StructureMember = {
   quote: string
   photoPath: string
   photoPreviewUrl?: string
+  pendingPhotoFile?: File | null
   instagram?: string
   linkedin?: string
   github?: string
@@ -81,6 +81,7 @@ type CabinetEditorState = {
   theme: string
   logoPath: string
   logoPreviewUrl?: string
+  pendingLogoFile?: File | null
   philosophy: string
   isDefault: boolean
   sections: DepartmentEditorState[]
@@ -145,6 +146,7 @@ function createBlankMember(department: string): StructureMember {
     quote: "",
     photoPath: "",
     photoPreviewUrl: "",
+    pendingPhotoFile: null,
     instagram: "",
     linkedin: "",
     github: "",
@@ -157,6 +159,7 @@ function createBlankMember(department: string): StructureMember {
 const initialActionState: StructureActionState = {
   error: null,
   success: null,
+  payload: null,
 }
 
 export function StructureAdminEditor({
@@ -170,10 +173,15 @@ export function StructureAdminEditor({
       ""
   )
   const [cabinets, setCabinets] = useState(initialCabinets)
-  const [uploadingMemberIds, setUploadingMemberIds] = useState<string[]>([])
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({})
-  const [uploadingCabinetLogo, setUploadingCabinetLogo] = useState(false)
   const [cabinetLogoError, setCabinetLogoError] = useState("")
+  const [pendingMemberDelete, setPendingMemberDelete] = useState<{
+    department: string
+    memberId: string
+    memberName: string
+  } | null>(null)
+  const [isSavingMember, setIsSavingMember] = useState(false)
+  const [isSavingCabinet, setIsSavingCabinet] = useState(false)
   const [activeEditor, setActiveEditor] = useState<{
     department: string
     memberId: string
@@ -186,36 +194,11 @@ export function StructureAdminEditor({
   } | null>(null)
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false)
   const [cabinetEditorOpen, setCabinetEditorOpen] = useState(false)
-  const [dialogSaveState, dialogSaveAction] = useActionState(
-    saveStructureAction,
-    initialActionState
-  )
-  const [cabinetDialogSaveState, cabinetDialogSaveAction] = useActionState(
-    saveStructureAction,
-    initialActionState
-  )
+  const [dialogSaveState, setDialogSaveState] = useState(initialActionState)
+  const [cabinetDialogSaveState, setCabinetDialogSaveState] = useState(initialActionState)
 
   const selectedCabinet =
     cabinets.find((cabinet) => cabinet.id === selectedCabinetId) ?? cabinets[0] ?? null
-  const serializedCabinets = useMemo(() => serializeCabinets(cabinets), [cabinets])
-
-  useEffect(() => {
-    if (!selectedCabinetId && cabinets[0]?.id) {
-      setSelectedCabinetId(cabinets[0].id)
-    }
-  }, [cabinets, selectedCabinetId])
-
-  useEffect(() => {
-    if (dialogSaveState.success) {
-      setActiveEditor(null)
-    }
-  }, [dialogSaveState.success])
-
-  useEffect(() => {
-    if (cabinetDialogSaveState.success) {
-      setCabinetEditorOpen(false)
-    }
-  }, [cabinetDialogSaveState.success])
 
   if (!selectedCabinet) {
     return (
@@ -280,19 +263,15 @@ export function StructureAdminEditor({
     setSelectedCabinetId(newCabinet.id)
   }
 
-  function removeCabinet() {
+  function getCabinetsAfterRemovingSelectedCabinet() {
     const remainingCabinets = cabinets.filter(
       (cabinet) => cabinet.id !== selectedCabinet.id
     )
 
-    const nextCabinets = remainingCabinets.map((cabinet, index) => ({
+    return remainingCabinets.map((cabinet, index) => ({
       ...cabinet,
       isDefault: selectedCabinet.isDefault ? index === 0 : cabinet.isDefault,
     }))
-
-    setCabinets(nextCabinets)
-    setSelectedCabinetId(nextCabinets[0]?.id ?? "")
-    setDeleteAlertOpen(false)
   }
 
   function markCabinetAsDefault(cabinetId: string) {
@@ -341,18 +320,30 @@ export function StructureAdminEditor({
     setActiveEditor({ department, memberId: newMember.id })
   }
 
-  function removeMember(department: string, memberId: string) {
-    updateCabinet((cabinet) => ({
-      ...cabinet,
-      sections: cabinet.sections.map((section) =>
-        section.department === department
-          ? {
-              ...section,
-              members: section.members.filter((member) => member.id !== memberId),
-            }
-          : section
-      ),
-    }))
+  function getCabinetsAfterRemovingMember(department: string, memberId: string) {
+    return cabinets.map((cabinet) =>
+      cabinet.id === selectedCabinet.id
+        ? {
+            ...cabinet,
+            sections: cabinet.sections.map((section) =>
+              section.department === department
+                ? {
+                    ...section,
+                    members: section.members.filter((member) => member.id !== memberId),
+                  }
+                : section
+            ),
+          }
+        : cabinet
+    )
+  }
+
+  function openMemberDeleteConfirmation(department: string, member: StructureMember) {
+    setPendingMemberDelete({
+      department,
+      memberId: member.id,
+      memberName: member.name || "fungsionaris ini",
+    })
   }
 
   async function updateMemberImage(
@@ -382,60 +373,35 @@ export function StructureAdminEditor({
     const { department, memberId } = pendingMemberCrop
 
     setUploadErrors((current) => ({ ...current, [memberId]: "" }))
-    setUploadingMemberIds((current) => [...current, memberId])
 
-    const body = new FormData()
-    body.set("file", croppedFile)
+    const previewUrl = URL.createObjectURL(croppedFile)
 
-    try {
-      const response = await fetch("/api/admin/storage/upload", {
-        method: "POST",
-        body,
-      })
+    updateCabinet((cabinet) => ({
+      ...cabinet,
+      sections: cabinet.sections.map((section) =>
+        section.department === department
+          ? {
+              ...section,
+              members: section.members.map((member) =>
+                member.id === memberId
+                  ? {
+                      ...member,
+                      photoPreviewUrl: previewUrl,
+                      pendingPhotoFile: croppedFile,
+                    }
+                  : member
+              ),
+            }
+          : section
+      ),
+    }))
 
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string; path?: string; url?: string }
-        | null
-
-      if (!response.ok || !payload?.path || !payload.url) {
-        throw new Error(payload?.error ?? "Upload gambar gagal diproses.")
-      }
-
-      updateCabinet((cabinet) => ({
-        ...cabinet,
-        sections: cabinet.sections.map((section) =>
-          section.department === department
-            ? {
-                ...section,
-                members: section.members.map((member) =>
-                  member.id === memberId
-                    ? {
-                        ...member,
-                        photoPath: payload.path ?? member.photoPath,
-                        photoPreviewUrl: payload.url ?? member.photoPreviewUrl,
-                      }
-                    : member
-                ),
-              }
-            : section
-        ),
-      }))
-
-      setPendingMemberCrop(null)
-      setMemberImageCropOpen(false)
-    } catch (error) {
-      setUploadErrors((current) => ({
-        ...current,
-        [memberId]:
-          error instanceof Error ? error.message : "Upload gambar gagal.",
-      }))
-    } finally {
-      setUploadingMemberIds((current) => current.filter((id) => id !== memberId))
-    }
+    setPendingMemberCrop(null)
+    setMemberImageCropOpen(false)
   }
 
   function getPhotoPreview(member: StructureMember) {
-    return member.photoPreviewUrl || member.photoPath
+    return normalizeImageSrc(member.photoPreviewUrl || member.photoPath)
   }
 
   function clearMemberImage(department: string, memberId: string) {
@@ -452,6 +418,7 @@ export function StructureAdminEditor({
                       ...member,
                       photoPath: "",
                       photoPreviewUrl: "",
+                      pendingPhotoFile: null,
                     }
                   : member
               ),
@@ -465,37 +432,13 @@ export function StructureAdminEditor({
     if (!file) return
 
     setCabinetLogoError("")
-    setUploadingCabinetLogo(true)
+    const previewUrl = URL.createObjectURL(file)
 
-    const body = new FormData()
-    body.set("file", file)
-
-    try {
-      const response = await fetch("/api/admin/storage/upload", {
-        method: "POST",
-        body,
-      })
-
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string; path?: string; url?: string }
-        | null
-
-      if (!response.ok || !payload?.path || !payload.url) {
-        throw new Error(payload?.error ?? "Upload logo kabinet gagal diproses.")
-      }
-
-      updateCabinet((cabinet) => ({
-        ...cabinet,
-        logoPath: payload.path!,
-        logoPreviewUrl: payload.url!,
-      }))
-    } catch (error) {
-      setCabinetLogoError(
-        error instanceof Error ? error.message : "Upload logo kabinet gagal."
-      )
-    } finally {
-      setUploadingCabinetLogo(false)
-    }
+    updateCabinet((cabinet) => ({
+      ...cabinet,
+      logoPreviewUrl: previewUrl,
+      pendingLogoFile: file,
+    }))
   }
 
   function clearCabinetLogo() {
@@ -504,7 +447,64 @@ export function StructureAdminEditor({
       ...cabinet,
       logoPath: "",
       logoPreviewUrl: "",
+      pendingLogoFile: null,
     }))
+  }
+
+  async function submitStructure(
+    mode: "member" | "cabinet",
+    nextCabinetsOverride?: CabinetEditorState[]
+  ) {
+    if (mode === "member") {
+      setIsSavingMember(true)
+      setDialogSaveState(initialActionState)
+    } else {
+      setIsSavingCabinet(true)
+      setCabinetDialogSaveState(initialActionState)
+    }
+
+    const nextCabinets = nextCabinetsOverride ?? cabinets
+    const formData = new FormData()
+    formData.set("payload", serializeCabinets(nextCabinets))
+
+    for (const cabinet of nextCabinets) {
+      if (cabinet.pendingLogoFile) {
+        formData.set(`cabinet-logo:${cabinet.id}`, cabinet.pendingLogoFile)
+      }
+
+      for (const section of cabinet.sections) {
+        for (const member of section.members) {
+          if (member.pendingPhotoFile) {
+            formData.set(`member-photo:${member.id}`, member.pendingPhotoFile)
+          }
+        }
+      }
+    }
+
+    const result = await saveStructureAction(initialActionState, formData)
+
+    if (result.payload) {
+      const nextCabinets = deserializeCabinets(result.payload)
+      setCabinets(nextCabinets)
+
+      if (!nextCabinets.some((cabinet) => cabinet.id === selectedCabinetId)) {
+        setSelectedCabinetId(nextCabinets[0]?.id ?? "")
+      }
+    }
+
+    if (mode === "member") {
+      setDialogSaveState(result)
+      if (result.success) {
+        setActiveEditor(null)
+      }
+      setIsSavingMember(false)
+    } else {
+      setCabinetDialogSaveState(result)
+      if (result.success) {
+        setCabinetEditorOpen(false)
+      }
+      setIsSavingCabinet(false)
+    }
   }
 
   return (
@@ -821,7 +821,7 @@ export function StructureAdminEditor({
                                 variant="destructive"
                                 size="icon-sm"
                                 aria-label={`Hapus ${member.name || "fungsionaris"}`}
-                                onClick={() => removeMember(section.department, member.id)}
+                                onClick={() => openMemberDeleteConfirmation(section.department, member)}
                               >
                                 <Trash2Icon className="size-4" />
                               </Button>
@@ -846,8 +846,13 @@ export function StructureAdminEditor({
       >
         {activeEditor && activeMember ? (
           <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-2xl p-0 sm:!max-w-5xl">
-            <form action={dialogSaveAction} className="bg-white p-6">
-              <input type="hidden" name="payload" value={serializedCabinets} />
+            <form
+              className="bg-white p-6"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submitStructure("member")
+              }}
+            >
               <DialogHeader>
                 <DialogTitle>Edit Fungsionaris</DialogTitle>
               </DialogHeader>
@@ -887,16 +892,13 @@ export function StructureAdminEditor({
                       </p>
                       <label className="mt-2 inline-flex cursor-pointer items-center gap-2 font-medium text-[#3f679c]">
                         <ImageUpIcon className="size-4" />
-                        {uploadingMemberIds.includes(activeMember.id)
-                          ? "Mengunggah..."
-                          : getPhotoPreview(activeMember)
-                            ? "Upload ulang"
-                            : "Upload gambar"}
+                        {getPhotoPreview(activeMember)
+                          ? "Upload ulang"
+                          : "Upload gambar"}
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
                           className="sr-only"
-                          disabled={uploadingMemberIds.includes(activeMember.id)}
                           onChange={(event) =>
                             updateMemberImage(
                               activeEditor.department,
@@ -1121,7 +1123,8 @@ export function StructureAdminEditor({
                 >
                   Batal
                 </Button>
-                <SaveMemberButton />
+                 <SaveMemberButton pending={isSavingMember} />
+
               </DialogFooter>
               {dialogSaveState.error ? (
                 <p className="mt-3 text-sm text-red-600">{dialogSaveState.error}</p>
@@ -1139,8 +1142,13 @@ export function StructureAdminEditor({
       <Dialog open={cabinetEditorOpen} onOpenChange={setCabinetEditorOpen}>
         {cabinetEditorOpen ? (
           <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-2xl p-0 sm:!max-w-5xl">
-            <form action={cabinetDialogSaveAction} className="bg-white p-6">
-              <input type="hidden" name="payload" value={serializedCabinets} />
+            <form
+              className="bg-white p-6"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submitStructure("cabinet")
+              }}
+            >
               <DialogHeader>
                 <DialogTitle>Edit Kabinet</DialogTitle>
               </DialogHeader>
@@ -1165,12 +1173,11 @@ export function StructureAdminEditor({
                     <div className="border-t border-slate-200 p-3">
                       <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#3f679c]">
                         <ImageUpIcon className="size-4" />
-                        {uploadingCabinetLogo ? "Mengunggah..." : "Upload logo"}
+                        Upload logo
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
                           className="sr-only"
-                          disabled={uploadingCabinetLogo}
                           onChange={(event) =>
                             updateCabinetLogo(event.target.files?.[0] ?? null)
                           }
@@ -1257,7 +1264,8 @@ export function StructureAdminEditor({
                 >
                   Batal
                 </Button>
-                <SaveCabinetButton />
+                 <SaveCabinetButton pending={isSavingCabinet} />
+
               </DialogFooter>
               {cabinetDialogSaveState.error ? (
                 <p className="mt-3 text-sm text-red-600">
@@ -1274,20 +1282,66 @@ export function StructureAdminEditor({
         ) : null}
       </Dialog>
 
+      <AlertDialog
+        open={Boolean(pendingMemberDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMemberDelete(null)
+          }
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus anggota ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMemberDelete?.memberName ?? "Fungsionaris ini"} akan dihapus dan perubahan langsung disimpan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                if (pendingMemberDelete) {
+                  const nextCabinets = getCabinetsAfterRemovingMember(
+                    pendingMemberDelete.department,
+                    pendingMemberDelete.memberId
+                  )
+                  setCabinets(nextCabinets)
+                  setPendingMemberDelete(null)
+                  void submitStructure("member", nextCabinets)
+                }
+              }}
+            >
+              Hapus anggota
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus kabinet ini?</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedCabinet.orderLabel} ·{" "}
-              {selectedCabinet.name || "Kabinet tanpa nama"} akan dihapus dari
-              editor. Jika kabinet ini sedang menjadi default, kabinet berikutnya
-              akan dijadikan default otomatis.
+              {selectedCabinet.name || "Kabinet tanpa nama"} akan dihapus dan
+              perubahan langsung disimpan. Jika kabinet ini sedang menjadi default,
+              kabinet berikutnya akan dijadikan default otomatis.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={removeCabinet}>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const nextCabinets = getCabinetsAfterRemovingSelectedCabinet()
+                setCabinets(nextCabinets)
+                setSelectedCabinetId(nextCabinets[0]?.id ?? "")
+                setDeleteAlertOpen(false)
+                void submitStructure("cabinet", nextCabinets)
+              }}
+            >
               Hapus kabinet
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1328,7 +1382,76 @@ function createNewCabinet(nextNumber: number): CabinetEditorState {
 }
 
 function getCabinetLogoPreview(cabinet: CabinetEditorState) {
-  return cabinet.logoPreviewUrl || cabinet.logoPath
+  return normalizeImageSrc(cabinet.logoPreviewUrl || cabinet.logoPath)
+}
+
+function normalizeImageSrc(value?: string) {
+  if (!value) {
+    return ""
+  }
+
+  if (
+    value.startsWith("/") ||
+    value.startsWith("blob:") ||
+    value.startsWith("data:")
+  ) {
+    return value
+  }
+
+  try {
+    const url = new URL(value)
+    return url.protocol === "http:" || url.protocol === "https:" ? value : ""
+  } catch {
+    return ""
+  }
+}
+
+function deserializeCabinets(payload: string): CabinetEditorState[] {
+  const parsed = JSON.parse(payload) as Array<{
+    id: string
+    orderLabel: string
+    name: string
+    theme: string
+    logoPath: string
+    logoPreviewUrl?: string
+    philosophy: string
+    isDefault: boolean
+    sections: Array<{
+      department: string
+      members: Array<{
+        id: string
+        name: string
+        nickname: string
+        position: string
+        program: string
+        entryYear: string
+        gender: Gender
+        quote: string
+        photoPath: string
+        photoPreviewUrl?: string
+        instagram?: string
+        linkedin?: string
+        github?: string
+        website?: string
+        tiktok?: string
+        youtube?: string
+      }>
+    }>
+  }>
+
+  return parsed.map((cabinet) => ({
+    ...cabinet,
+    logoPreviewUrl: cabinet.logoPreviewUrl ?? cabinet.logoPath,
+    pendingLogoFile: null,
+    sections: cabinet.sections.map((section) => ({
+      ...section,
+      members: section.members.map((member) => ({
+        ...member,
+        photoPreviewUrl: member.photoPreviewUrl ?? member.photoPath,
+        pendingPhotoFile: null,
+      })),
+    })),
+  }))
 }
 
 function serializeCabinets(cabinets: CabinetEditorState[]) {
@@ -1365,9 +1488,7 @@ function serializeCabinets(cabinets: CabinetEditorState[]) {
   )
 }
 
-function SaveMemberButton() {
-  const { pending } = useFormStatus()
-
+function SaveMemberButton({ pending }: { pending: boolean }) {
   return (
     <Button
       type="submit"
@@ -1379,9 +1500,7 @@ function SaveMemberButton() {
   )
 }
 
-function SaveCabinetButton() {
-  const { pending } = useFormStatus()
-
+function SaveCabinetButton({ pending }: { pending: boolean }) {
   return (
     <Button
       type="submit"
