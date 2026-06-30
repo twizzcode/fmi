@@ -17,7 +17,7 @@ export const auth = betterAuth({
   baseURL: {
     allowedHosts: [appHost, adminHost],
     fallback: process.env.BETTER_AUTH_URL,
-    protocol: "http",
+    protocol: "https",
   },
   secret: process.env.BETTER_AUTH_SECRET,
   trustedOrigins: authTrustedOrigins,

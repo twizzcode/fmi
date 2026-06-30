@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   title: "FMI FMIPA UNNES",
   description: "Slicing frontend FMI FMIPA UNNES dengan Next.js dan Tailwind CSS.",
   icons: {
-    icon: "/icon.png",
-    apple: "/apple-icon.png",
-    shortcut: "/icon.png",
+    icon: "/images/logo-fmi-hitam.png",
+    apple: "/images/logo-fmi-hitam.png",
+    shortcut: "/images/logo-fmi-hitam.png",
   },
 };
 
