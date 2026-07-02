@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { BriefcaseBusinessIcon, ImageUpIcon, PencilIcon, Trash2Icon } from "lucide-react"
@@ -54,13 +55,14 @@ export function ServiceManager({ services }: { services: ServiceView[] }) {
           key={item.id}
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
         >
-          <div className="aspect-[4/3] bg-slate-100">
+          <div className="relative aspect-[4/3] bg-slate-100">
             {item.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={item.imageUrl}
                 alt={item.title}
-                className="h-full w-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -152,13 +154,14 @@ function EditDialogContent({
         <div className="grid flex-1 gap-5 overflow-y-auto px-6 py-2">
           <div className="grid gap-4 md:grid-cols-[260px_minmax(0,1fr)]">
             <div className="space-y-3">
-              <div className="aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100">
                 {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={item.imageUrl}
                     alt={item.title}
-                    className="h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">

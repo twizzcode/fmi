@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useActionState, useEffect, useMemo, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { ImageIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react"
@@ -53,13 +54,14 @@ export function GalleryManager({ items }: { items: GalleryActivity[] }) {
           key={item.id}
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
         >
-          <div className="aspect-[4/3] bg-slate-100">
+          <div className="relative aspect-[4/3] bg-slate-100">
             {item.coverImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={item.coverImageUrl}
                 alt={item.title}
-                className="h-full w-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -238,15 +240,14 @@ function EditDialogContent({
                       >
                         <XIcon className="size-4" />
                       </Button>
-                      <div className="aspect-[4/3] bg-slate-100">
+                      <div className="relative aspect-[4/3] bg-slate-100">
                         {photo.url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={photo.url}
                             alt={photo.alt}
-                            className={`h-full w-full object-cover ${
-                              isRemoved ? "opacity-40" : ""
-                            }`}
+                            fill
+                            unoptimized
+                            className={`object-cover ${isRemoved ? "opacity-40" : ""}`}
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-xs text-slate-400">

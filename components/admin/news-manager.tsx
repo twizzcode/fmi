@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { NewspaperIcon, ImageUpIcon, PencilIcon, Trash2Icon } from "lucide-react"
@@ -55,10 +56,15 @@ export function NewsManager({ items }: { items: NewsArticle[] }) {
     <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
         <article key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="aspect-[4/3] bg-slate-100">
+          <div className="relative aspect-[4/3] bg-slate-100">
             {item.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+              <Image
+                src={item.imageUrl}
+                alt={item.title}
+                fill
+                unoptimized
+                className="object-cover"
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-400">Gambar tidak tersedia</div>
             )}
@@ -229,10 +235,15 @@ function EditDialogContent({
         <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-6 py-3">
           <div className="grid gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className="space-y-3">
-              <div className="aspect-video overflow-hidden rounded-2xl bg-slate-100">
+              <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-100">
                 {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">Gambar tidak tersedia</div>
                 )}

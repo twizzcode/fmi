@@ -78,26 +78,28 @@ function TweetComponent({
   }, [onError, onLoad, tweetID]);
 
   useEffect(() => {
-    if (tweetID !== previousTweetIDRef.current) {
-      setIsTweetLoading(true);
+    if (tweetID === previousTweetIDRef.current) return;
 
-      if (isTwitterScriptLoading) {
-        const script = document.createElement("script");
-        script.src = WIDGET_SCRIPT_URL;
-        script.async = true;
-        document.body?.appendChild(script);
-        script.onload = createTweet;
-        if (onError) {
-          script.onerror = onError as OnErrorEventHandler;
-        }
-      } else {
-        createTweet();
-      }
+    previousTweetIDRef.current = tweetID;
+    setIsTweetLoading(true);
 
-      if (previousTweetIDRef) {
-        previousTweetIDRef.current = tweetID;
+    if (isTwitterScriptLoading) {
+      const script = document.createElement("script");
+      script.src = WIDGET_SCRIPT_URL;
+      script.async = true;
+      document.body?.appendChild(script);
+      script.onload = () => {
+        void createTweet();
+      };
+      if (onError) {
+        script.onerror = onError as OnErrorEventHandler;
       }
+      return;
     }
+
+    queueMicrotask(() => {
+      void createTweet();
+    });
   }, [createTweet, onError, tweetID]);
 
   return (
@@ -179,11 +181,7 @@ export class TweetNode extends DecoratorBlockNode {
     return this.__id;
   }
 
-  getTextContent(
-    _includeInert?: boolean | undefined,
-
-    _includeDirectionless?: false | undefined,
-  ): string {
+  getTextContent(): string {
     return `https://x.com/i/web/status/${this.__id}`;
   }
 

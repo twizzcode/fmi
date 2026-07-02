@@ -154,6 +154,7 @@ function LazyImage({
   const imageStyle = calculateDimensions();
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className || undefined}
       src={src}
@@ -168,6 +169,7 @@ function LazyImage({
 
 function BrokenImage(): JSX.Element {
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={""}
       style={{

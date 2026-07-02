@@ -1,4 +1,4 @@
-import { desc, ilike, or } from "drizzle-orm"
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { SearchIcon } from "lucide-react"
 
 import { MemberFilterTabs } from "@/components/admin/member-filter-tabs"
@@ -6,15 +6,7 @@ import { MemberRoleActions } from "@/components/admin/member-role-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { AdminPagination } from "@/components/admin/admin-pagination"
 import {
   Table,
   TableBody,
@@ -87,30 +79,42 @@ export default async function AdminAnggotaPage({
   const currentPage = Number(params.page) || 1
   const itemsPerPage = 10
 
-  const usersQuery = db
-    .select()
-    .from(schema.users)
-    .orderBy(desc(schema.users.createdAt))
-
-  const users = query
-    ? await usersQuery.where(
-        or(
-          ilike(schema.users.email, `%${query}%`),
-          ilike(schema.users.name, `%${query}%`)
-        )
+  const searchFilter = query
+    ? or(
+        ilike(schema.users.email, `%${query}%`),
+        ilike(schema.users.name, `%${query}%`)
       )
-    : await usersQuery
+    : undefined
+  const roleFilter = currentTab !== "all" ? eq(schema.users.role, currentTab as UserRole) : undefined
+  const whereClause =
+    searchFilter && roleFilter
+      ? and(searchFilter, roleFilter)
+      : searchFilter ?? roleFilter
 
-  const filteredUsers = users.filter((user) => {
-    if (currentTab === "all") return true
+  const [countResult, users] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(schema.users).where(whereClause),
+    db
+      .select()
+      .from(schema.users)
+      .where(whereClause)
+      .orderBy(desc(schema.users.createdAt))
+      .limit(itemsPerPage)
+      .offset((Math.max(1, currentPage) - 1) * itemsPerPage),
+  ])
 
-    return user.role === currentTab
-  })
-
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
+  const totalUsers = countResult[0]?.count ?? 0
+  const totalPages = Math.ceil(totalUsers / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const startIndex = (safeCurrentPage - 1) * itemsPerPage
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage)
+  const paginatedUsers =
+    safeCurrentPage === currentPage
+      ? users
+      : await db
+          .select()
+          .from(schema.users)
+          .where(whereClause)
+          .orderBy(desc(schema.users.createdAt))
+          .limit(itemsPerPage)
+          .offset((safeCurrentPage - 1) * itemsPerPage)
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -150,9 +154,10 @@ export default async function AdminAnggotaPage({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Semua akun login</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {filteredUsers.length} akun ditemukan{query ? ` untuk "${query}"` : ""}.
-            </p>
+              <p className="mt-1 text-sm text-slate-500">
+               {totalUsers} akun ditemukan{query ? ` untuk "${query}"` : ""}.
+             </p>
+
           </div>
           <MemberFilterTabs currentTab={currentTab} />
         </div>
@@ -223,66 +228,13 @@ export default async function AdminAnggotaPage({
         </div>
 
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={safeCurrentPage > 1 ? `/anggota?${createQueryString({ q: query, tab: currentTab, page: String(safeCurrentPage - 1) })}` : "#"}
-                  className={safeCurrentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => i + 1).map((page) => {
-                if (totalPages === 0) {
-                  return (
-                    <PaginationItem key={1}>
-                      <PaginationLink href={`/anggota?${createQueryString({ q: query, tab: currentTab, page: "1" })}`} isActive>
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= safeCurrentPage - 1 && page <= safeCurrentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href={`/anggota?${createQueryString({ q: query, tab: currentTab, page: String(page) })}`}
-                        isActive={safeCurrentPage === page}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (page === safeCurrentPage - 2 || page === safeCurrentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )
-                }
-
-                return null
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href={safeCurrentPage < totalPages ? `/anggota?${createQueryString({ q: query, tab: currentTab, page: String(safeCurrentPage + 1) })}` : "#"}
-                  className={
-                    safeCurrentPage >= totalPages || totalPages === 0
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) =>
+              `/anggota?${createQueryString({ q: query, tab: currentTab, page: String(page) })}`
+            }
+          />
         </div>
       </section>
     </div>

@@ -1,17 +1,29 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { cache } from "react"
 
 import { PageHero } from "@/components/page-hero"
 import { StructurePageContent } from "@/components/structure-page-content"
-import { getStructureCabinetPageData } from "@/lib/structure"
+import {
+  getStructureCabinetIds,
+  getStructureCabinetPageData,
+} from "@/lib/structure"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
+
+const getCachedStructureCabinetPageData = cache(getStructureCabinetPageData)
+
+export async function generateStaticParams() {
+  const cabinets = await getStructureCabinetIds()
+
+  return cabinets.map((cabinet) => ({ id: cabinet.id }))
+}
 
 export async function generateMetadata(
   props: PageProps<"/struktur/[id]">
 ): Promise<Metadata> {
   const { id } = await props.params
-  const { currentCabinet } = await getStructureCabinetPageData(id)
+  const { currentCabinet } = await getCachedStructureCabinetPageData(id)
 
   if (!currentCabinet) {
     return {
@@ -31,7 +43,7 @@ export async function generateMetadata(
 
 export default async function StructureCabinetPage(props: PageProps<"/struktur/[id]">) {
   const { id } = await props.params
-  const { cabinets, currentCabinet } = await getStructureCabinetPageData(id)
+  const { cabinets, currentCabinet } = await getCachedStructureCabinetPageData(id)
 
   if (!currentCabinet) {
     notFound()

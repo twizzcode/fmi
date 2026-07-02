@@ -1,15 +1,8 @@
+import Image from "next/image"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { TestimonialFilterTabs } from "@/components/admin/testimonial-filter-tabs"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { AdminPagination } from "@/components/admin/admin-pagination"
 import {
   Table,
   TableBody,
@@ -18,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getTestimonialsWithImageUrls } from "@/lib/testimonials"
+import { getPaginatedTestimonialsWithImageUrls } from "@/lib/testimonials"
 import { ApproveTestimonialButton, RejectTestimonialButton, DeleteTestimonialButton } from "./actions-buttons"
 
 export default async function AdminTestimoniManagementPage({
@@ -27,24 +20,30 @@ export default async function AdminTestimoniManagementPage({
   searchParams: Promise<{ tab?: string; page?: string }>
 }) {
   const params = await searchParams
-  const currentTab = params.tab || "all"
+  const currentTab =
+    params.tab === "pending" || params.tab === "approved" || params.tab === "rejected"
+      ? params.tab
+      : "all"
   const currentPage = Number(params.page) || 1
   const itemsPerPage = 10
 
-  const testimonials = await getTestimonialsWithImageUrls()
-  const filteredTestimonials =
-    currentTab === "pending"
-      ? testimonials.filter((item) => item.status === "pending")
-      : currentTab === "approved"
-        ? testimonials.filter((item) => item.status === "approved")
-        : currentTab === "rejected"
-          ? testimonials.filter((item) => item.status === "rejected")
-          : testimonials
-
-  const totalPages = Math.ceil(filteredTestimonials.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedTestimonials = filteredTestimonials.slice(startIndex, endIndex)
+  const { items: testimonials, totalCount } = await getPaginatedTestimonialsWithImageUrls({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    status: currentTab,
+  })
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const paginatedTestimonials =
+    safeCurrentPage === currentPage
+      ? testimonials
+      : (
+          await getPaginatedTestimonialsWithImageUrls({
+            page: safeCurrentPage,
+            pageSize: itemsPerPage,
+            status: currentTab,
+          })
+        ).items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -54,7 +53,7 @@ export default async function AdminTestimoniManagementPage({
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Daftar Testimoni</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {filteredTestimonials.length} testimoni ditemukan
+              {totalCount} testimoni ditemukan
             </p>
           </div>
 
@@ -64,81 +63,18 @@ export default async function AdminTestimoniManagementPage({
         <TestimonialTable testimonials={paginatedTestimonials} />
 
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={
-                    currentPage > 1
-                      ? `/admin/testimoni?tab=${currentTab}&page=${currentPage - 1}`
-                      : "#"
-                  }
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => i + 1).map((page) => {
-                if (totalPages === 0) {
-                  return (
-                    <PaginationItem key={1}>
-                      <PaginationLink href={`/admin/testimoni?tab=${currentTab}&page=1`} isActive>
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href={`/admin/testimoni?tab=${currentTab}&page=${page}`}
-                        isActive={currentPage === page}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )
-                }
-
-                return null
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href={
-                    currentPage < totalPages
-                      ? `/admin/testimoni?tab=${currentTab}&page=${currentPage + 1}`
-                      : "#"
-                  }
-                  className={
-                    currentPage >= totalPages || totalPages === 0
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) => `/admin/testimoni?tab=${currentTab}&page=${page}`}
+          />
         </div>
       </section>
     </div>
   )
 }
 
-type TestimonialView = Awaited<ReturnType<typeof getTestimonialsWithImageUrls>>[number]
+type TestimonialView = Awaited<ReturnType<typeof getPaginatedTestimonialsWithImageUrls>>["items"][number]
 
 function TestimonialTable({ testimonials }: { testimonials: TestimonialView[] }) {
   return (
@@ -166,13 +102,14 @@ function TestimonialTable({ testimonials }: { testimonials: TestimonialView[] })
             testimonials.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
-                  <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
                     {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={item.imageUrl}
                         alt={item.name}
-                        className="h-full w-full object-cover"
+                        fill
+                        unoptimized
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-slate-400">

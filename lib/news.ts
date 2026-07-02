@@ -1,4 +1,4 @@
-import { and, desc, eq, ne } from "drizzle-orm"
+import { and, desc, eq, ne, sql } from "drizzle-orm"
 
 import { db, schema } from "@/lib/db"
 import { createSignedStorageUrl } from "@/lib/supabase/storage"
@@ -39,8 +39,19 @@ export async function getNewsArticles() {
 }
 
 export async function getLatestNewsArticles(limit = 3) {
-  const items = await getNewsArticles()
-  return items.slice(0, limit)
+  const items = await db
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
+    })
+    .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
+    .where(eq(schema.newsArticles.status, "published"))
+    .orderBy(desc(schema.newsArticles.publishedAt))
+    .limit(limit)
+
+  return Promise.all(items.map(mapDbNewsArticle))
 }
 
 export async function getNewsArticleBySlug(slug: string) {
@@ -114,6 +125,76 @@ export async function getAdminNewsArticles(userId?: string) {
   }
 
   return Promise.all(items.map(mapDbNewsArticle))
+}
+
+export async function getPaginatedAdminNewsArticles({
+  page,
+  pageSize,
+  userId,
+  status,
+}: {
+  page: number
+  pageSize: number
+  userId?: string
+  status?: NewsStatus | "all"
+}) {
+  const currentPage = Math.max(1, page)
+  const offset = (currentPage - 1) * pageSize
+  const whereClause =
+    userId && status && status !== "all"
+      ? and(eq(schema.newsArticles.userId, userId), eq(schema.newsArticles.status, status))
+      : userId
+        ? eq(schema.newsArticles.userId, userId)
+        : status && status !== "all"
+          ? eq(schema.newsArticles.status, status)
+          : undefined
+
+  const [countResult, items] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.newsArticles)
+      .where(whereClause),
+    db
+      .select({
+        article: schema.newsArticles,
+        authorImage: schema.users.image,
+        authorUploadedImagePath: schema.users.uploadedImagePath,
+      })
+      .from(schema.newsArticles)
+      .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
+      .where(whereClause)
+      .orderBy(desc(schema.newsArticles.publishedAt))
+      .limit(pageSize)
+      .offset(offset),
+  ])
+
+  return {
+    totalCount: countResult[0]?.count ?? 0,
+    items: await Promise.all(items.map(mapDbNewsArticle)),
+  }
+}
+
+export async function getAdminNewsArticleById(id: string, userId?: string) {
+  const [item] = await db
+    .select({
+      article: schema.newsArticles,
+      authorImage: schema.users.image,
+      authorUploadedImagePath: schema.users.uploadedImagePath,
+    })
+    .from(schema.newsArticles)
+    .leftJoin(schema.users, eq(schema.newsArticles.userId, schema.users.id))
+    .where(
+      userId
+        ? and(eq(schema.newsArticles.id, id), eq(schema.newsArticles.userId, userId))
+        : eq(schema.newsArticles.id, id)
+    )
+    .limit(1)
+
+  if (!item) {
+    return null
+  }
+
+  return mapDbNewsArticle(item)
 }
 
 export function createBodyJsonFromParagraphs(paragraphs: string[]) {

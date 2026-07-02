@@ -137,12 +137,15 @@ export function ImageCropper({
                 className="mx-auto w-fit max-w-full"
               >
                 {preview ? (
-                  <img
+                  <Image
                     ref={imgRef}
                     alt="Crop preview"
                     src={preview}
+                    width={1200}
+                    height={1200}
                     onLoad={onImageLoad}
                     className="block max-h-[min(52svh,32rem)] max-w-full object-contain"
+                    unoptimized
                   />
                 ) : (
                   <div className="flex h-[320px] w-full min-w-[260px] items-center justify-center text-sm text-slate-400">

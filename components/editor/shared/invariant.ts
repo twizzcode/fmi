@@ -1,8 +1,9 @@
 export function invariant(
   cond?: boolean,
   message?: string,
-  ..._args: string[]
+  ...args: unknown[]
 ): asserts cond {
+  void args
   if (cond) {
     return;
   }

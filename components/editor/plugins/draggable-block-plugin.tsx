@@ -92,12 +92,6 @@ export function DraggableBlockPlugin({
     ];
   }, [baseOptions, dynamicOptionsFn, queryString]);
 
-  useEffect(() => {
-    if (!isPickerOpen) return;
-    setHighlightedIndex((current) =>
-      Math.min(current, Math.max(options.length - 1, 0)),
-    );
-  }, [isPickerOpen, options.length]);
 
   useEffect(() => {
     if (!isPickerOpen) return;

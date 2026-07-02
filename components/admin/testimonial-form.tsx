@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useActionState, useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { ImageUpIcon, PlusIcon } from "lucide-react"
@@ -112,12 +113,14 @@ function CreateDialogContent({ onClose }: { onClose: () => void }) {
         <div className="grid flex-1 gap-5 overflow-y-auto px-6 py-2">
           <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
             <div className="space-y-3">
-              <div className="aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                 {previewUrl ? (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt="Preview testimoni"
-                    className="h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-center text-sm text-slate-400">

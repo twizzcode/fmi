@@ -28,7 +28,7 @@ const initialState: TestimonialApprovalActionState = {
 }
 
 export function ApproveTestimonialButton({ testimonialId }: { testimonialId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     approveTestimonialAction,
     initialState
   )
@@ -59,7 +59,7 @@ function ApproveSubmitButton() {
 }
 
 export function RejectTestimonialButton({ testimonialId }: { testimonialId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     rejectTestimonialAction,
     initialState
   )
@@ -90,7 +90,7 @@ function RejectSubmitButton() {
 }
 
 export function DeleteTestimonialButton({ testimonialId }: { testimonialId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     deleteTestimonialAdminAction,
     initialState
   )

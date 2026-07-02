@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
@@ -7,15 +8,7 @@ import { deleteGalleryEntryAction } from "@/app/(admin)/admin-space/galeri/actio
 import { DeleteGalleryButton } from "@/components/admin/delete-gallery-button"
 import { auth, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { AdminPagination } from "@/components/admin/admin-pagination"
 import {
   Table,
   TableBody,
@@ -24,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getGalleryActivities } from "@/lib/gallery"
+import { getPaginatedGalleryActivities } from "@/lib/gallery"
 import { isSupabaseStorageConfigured } from "@/lib/supabase/config"
 
 export default async function AdminGaleriPage({
@@ -45,16 +38,26 @@ export default async function AdminGaleriPage({
   const itemsPerPage = 10
 
   const isConfigured = isSupabaseStorageConfigured()
-  const items = isConfigured
-    ? await getGalleryActivities(
-        getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
-          ? undefined
-          : session.user.id
-      )
-    : []
-  const totalPages = Math.ceil(items.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage)
+  const role = getSessionUserRole(session)
+  const { items, totalCount } = isConfigured
+    ? await getPaginatedGalleryActivities({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+      })
+    : { items: [], totalCount: 0 }
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const paginatedItems =
+    !isConfigured || safeCurrentPage === currentPage
+      ? items
+      : (
+          await getPaginatedGalleryActivities({
+            page: safeCurrentPage,
+            pageSize: itemsPerPage,
+            userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+          })
+        ).items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -65,12 +68,13 @@ export default async function AdminGaleriPage({
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Galeri
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              {items.length} kegiatan tersimpan.
-            </p>
+              <p className="mt-2 text-sm text-slate-500">
+               {totalCount} kegiatan tersimpan.
+             </p>
+
           </div>
           <Button asChild variant="outline" className="bg-white hover:bg-slate-50" disabled={!isConfigured}>
-            <Link href="/galeri/tambah">
+            <Link href="/galeri/tambah" prefetch={false}>
               <PlusCircleIcon className="mr-2 size-4" />
               Tambah Kegiatan
             </Link>
@@ -106,13 +110,14 @@ export default async function AdminGaleriPage({
                 paginatedItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <div className="h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
+                      <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
                         {item.coverImageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={item.coverImageUrl}
                             alt={item.title}
-                            className="h-full w-full object-cover"
+                            fill
+                            unoptimized
+                            className="object-cover"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-xs text-slate-400">
@@ -130,7 +135,7 @@ export default async function AdminGaleriPage({
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="icon-sm" asChild>
-                          <Link href={`/galeri/${item.id}/edit`}>
+                          <Link href={`/galeri/${item.id}/edit`} prefetch={false}>
                             <PencilIcon className="size-4" />
                           </Link>
                         </Button>
@@ -149,63 +154,11 @@ export default async function AdminGaleriPage({
         </div>
 
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={currentPage > 1 ? `/galeri?page=${currentPage - 1}` : "#"}
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => i + 1).map((page) => {
-                if (totalPages === 0) {
-                  return (
-                    <PaginationItem key={1}>
-                      <PaginationLink href="/galeri?page=1" isActive>
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink href={`/galeri?page=${page}`} isActive={currentPage === page}>
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )
-                }
-
-                return null
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href={currentPage < totalPages ? `/galeri?page=${currentPage + 1}` : "#"}
-                  className={
-                    currentPage >= totalPages || totalPages === 0
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) => `/galeri?page=${page}`}
+          />
         </div>
         </>
       </section>

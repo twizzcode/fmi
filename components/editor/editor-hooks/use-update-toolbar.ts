@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 import {
   $getSelection,
@@ -13,8 +13,9 @@ export function useUpdateToolbarHandler(
   callback: (selection: BaseSelection) => void,
 ) {
   const { activeEditor } = useToolbarContext();
-  const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+  const handleSelection = useEffectEvent((selection: BaseSelection) => {
+    callback(selection);
+  });
 
   useEffect(() => {
     return activeEditor.registerCommand(
@@ -22,7 +23,7 @@ export function useUpdateToolbarHandler(
       () => {
         const selection = $getSelection();
         if (selection) {
-          callbackRef.current(selection);
+          handleSelection(selection);
         }
         return false;
       },
@@ -34,7 +35,7 @@ export function useUpdateToolbarHandler(
     activeEditor.getEditorState().read(() => {
       const selection = $getSelection();
       if (selection) {
-        callbackRef.current(selection);
+        handleSelection(selection);
       }
     });
   }, [activeEditor]);

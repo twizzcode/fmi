@@ -129,7 +129,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ApproveButton({ testimonialId }: { testimonialId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     approveTestimonialAction,
     initialState
   )
@@ -160,7 +160,7 @@ function ApproveSubmitButton() {
 }
 
 function RejectButton({ testimonialId }: { testimonialId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     rejectTestimonialAction,
     initialState
   )

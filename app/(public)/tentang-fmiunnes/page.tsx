@@ -1,9 +1,13 @@
 import type { Metadata } from "next"
+import dynamic from "next/dynamic"
 import Image from "next/image";
-import { Industries1 } from "@/components/industries1";
 import { PageHero } from "@/components/page-hero";
 import { Testimonial10 } from "@/components/testimonial10";
 import { departmentProfiles, siteStats } from "@/lib/site-data";
+
+const Industries1 = dynamic(() =>
+  import("@/components/industries1").then((module) => module.Industries1)
+)
 
 const departmentIcons = {
   "Pengurus Harian": "users",
@@ -93,6 +97,20 @@ const departmentModalContent = {
     ],
   },
 } as const;
+
+const departmentIndustries = departmentProfiles.map((department) => ({
+  name: department.name,
+  description: department.description,
+  detail:
+    departmentDetails[
+      department.name as keyof typeof departmentDetails
+    ],
+  detailParagraphs:
+    departmentModalContent[
+      department.name as keyof typeof departmentModalContent
+    ]?.detailParagraphs,
+  icon: departmentIcons[department.name as keyof typeof departmentIcons],
+}))
 
 export const metadata: Metadata = {
   title: "Tentang FMI UNNES",
@@ -215,6 +233,7 @@ export default function AboutPage() {
                 src="/images/foto bersama.jpg"
                 alt="Kegiatan mentoring FMI"
                 fill
+                sizes="(min-width: 1024px) 40vw, 100vw"
                 className="object-cover object-[36%_center]"
               />
             </div>
@@ -225,6 +244,7 @@ export default function AboutPage() {
                   src="/images/foto bersama.jpg"
                   alt="Suasana mentoring FMI"
                   fill
+                  sizes="(min-width: 768px) 20vw, 100vw"
                   className="object-cover object-[72%_24%]"
                 />
               </div>
@@ -233,6 +253,7 @@ export default function AboutPage() {
                   src="/images/foto bersama.jpg"
                   alt="Kebersamaan peserta mentoring FMI"
                   fill
+                  sizes="(min-width: 768px) 20vw, 100vw"
                   className="object-cover object-[68%_78%]"
                 />
               </div>
@@ -250,6 +271,7 @@ export default function AboutPage() {
                   src="/images/foto bersama.jpg"
                   alt="Aktivitas pengembangan soft skills FMI"
                   fill
+                  sizes="(min-width: 768px) 20vw, 100vw"
                   className="object-cover object-[18%_28%]"
                 />
               </div>
@@ -258,6 +280,7 @@ export default function AboutPage() {
                   src="/images/foto bersama.jpg"
                   alt="Kerja sama tim di FMI"
                   fill
+                  sizes="(min-width: 768px) 20vw, 100vw"
                   className="object-cover object-[52%_82%]"
                 />
               </div>
@@ -268,6 +291,7 @@ export default function AboutPage() {
                 src="/images/foto bersama.jpg"
                 alt="Pengembangan soft skills mahasiswa di FMI"
                 fill
+                sizes="(min-width: 1024px) 40vw, 100vw"
                 className="object-cover object-[84%_center]"
               />
             </div>
@@ -312,19 +336,7 @@ export default function AboutPage() {
           ctaLabel="Lihat Struktur"
           ctaHref="/struktur"
           industryLabel="Peran"
-          industries={departmentProfiles.map((department) => ({
-            name: department.name,
-            description: department.description,
-            detail:
-              departmentDetails[
-                department.name as keyof typeof departmentDetails
-              ],
-            detailParagraphs:
-              departmentModalContent[
-                department.name as keyof typeof departmentModalContent
-              ]?.detailParagraphs,
-            icon: departmentIcons[department.name as keyof typeof departmentIcons],
-          }))}
+          industries={departmentIndustries}
         />
       </section>
     </div>

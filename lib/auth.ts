@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js"
 import {
   appHost,
   adminHost,
+  authBaseUrl,
   authTrustedOrigins,
   cookieDomain,
 } from "@/lib/app-config"
@@ -13,12 +14,13 @@ import { db, schema } from "@/lib/db"
 function createAuth() {
   const googleClientId = process.env.GOOGLE_CLIENT_ID
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const protocol = authBaseUrl.startsWith("https://") ? "https" : "http"
 
   return betterAuth({
     baseURL: {
       allowedHosts: [appHost, adminHost],
-      fallback: process.env.BETTER_AUTH_URL,
-      protocol: "https",
+      fallback: authBaseUrl,
+      protocol,
     },
     secret: process.env.BETTER_AUTH_SECRET,
     trustedOrigins: authTrustedOrigins,

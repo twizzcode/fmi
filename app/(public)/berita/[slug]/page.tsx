@@ -3,20 +3,33 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeftIcon } from "@radix-ui/react-icons"
 import { notFound } from "next/navigation"
+import { cache } from "react"
 
 import { NewsBodyViewer } from "@/components/news/news-body-viewer"
 import { NewsViewTracker } from "@/components/news/news-view-tracker"
 import { BlurFade } from "@/components/ui/blur-fade"
 import { createAppUrl } from "@/lib/app-config"
-import { getNewsArticleBySlug, getRelatedNewsArticles } from "@/lib/news"
+import {
+  getNewsArticleBySlug,
+  getNewsArticleSlugs,
+  getRelatedNewsArticles,
+} from "@/lib/news"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
+
+const getCachedNewsArticleBySlug = cache(getNewsArticleBySlug)
+
+export async function generateStaticParams() {
+  const slugs = await getNewsArticleSlugs()
+
+  return slugs.map((slug) => ({ slug }))
+}
 
 export async function generateMetadata(
   props: PageProps<"/berita/[slug]">
 ): Promise<Metadata> {
   const { slug } = await props.params
-  const article = await getNewsArticleBySlug(slug)
+  const article = await getCachedNewsArticleBySlug(slug)
 
   if (!article) {
     return {
@@ -63,7 +76,7 @@ export default async function NewsDetailPage(
   props: PageProps<"/berita/[slug]">
 ) {
   const { slug } = await props.params
-  const article = await getNewsArticleBySlug(slug)
+  const article = await getCachedNewsArticleBySlug(slug)
 
   if (!article) {
     notFound()
@@ -106,6 +119,7 @@ export default async function NewsDetailPage(
                     alt={article.title}
                     fill
                     priority
+                    sizes="(min-width: 1280px) 75vw, 100vw"
                     className="object-cover"
                   />
                 </div>

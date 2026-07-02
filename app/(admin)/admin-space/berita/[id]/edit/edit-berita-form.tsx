@@ -1,37 +1,39 @@
 "use client"
 
 import Image from "next/image"
-import { useActionState, useEffect, useRef, useState } from "react"
+import { type ReactNode, useActionState, useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { useRouter } from "next/navigation"
 import { ArrowLeftIcon, ImageUpIcon } from "lucide-react"
 import Link from "next/link"
 
-import { createNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/berita/actions"
+import { updateNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/berita/actions"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import type { NewsArticle } from "@/lib/news"
 
 const initialNewsActionState: NewsActionState = {
   error: null,
   success: null,
 }
 
-export default function TambahBeritaPage() {
+export function EditBeritaForm({ newsItem }: { newsItem: NewsArticle }) {
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [editorKey] = useState(0)
-  const [title, setTitle] = useState("")
-  const [slug, setSlug] = useState("")
+  const previewObjectUrlRef = useRef<string | null>(null)
+  const [title, setTitle] = useState(newsItem.title)
+  const [slug, setSlug] = useState(newsItem.slug)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [croppedFile, setCroppedFile] = useState<File | null>(null)
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
-  const [preview, setPreview] = useState("")
+  const [replaceImage, setReplaceImage] = useState(false)
+  const [preview, setPreview] = useState(newsItem.imageUrl)
   const [state, formAction] = useActionState(
-    createNewsArticleAction,
+    updateNewsArticleAction,
     initialNewsActionState
   )
 
@@ -42,21 +44,20 @@ export default function TambahBeritaPage() {
   }, [state.success, router])
 
   useEffect(() => {
-    if (croppedFile) {
-      const objectUrl = URL.createObjectURL(croppedFile)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPreview(objectUrl)
-      return () => URL.revokeObjectURL(objectUrl)
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current)
+      }
     }
-  }, [croppedFile])
+  }, [])
 
   function generateSlug(text: string) {
     return text
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
   }
 
   function handleTitleChange(value: string) {
@@ -72,14 +73,28 @@ export default function TambahBeritaPage() {
     }
   }
 
-  function handleCropComplete(croppedFile: File) {
-    setCroppedFile(croppedFile)
+  function handleCropComplete(nextCroppedFile: File) {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current)
+    }
+
+    const objectUrl = URL.createObjectURL(nextCroppedFile)
+    previewObjectUrlRef.current = objectUrl
+    setCroppedFile(nextCroppedFile)
+    setPreview(objectUrl)
+    setReplaceImage(true)
   }
 
   function handleRemoveSelectedImage() {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current)
+      previewObjectUrlRef.current = null
+    }
+
     setSelectedFile(null)
     setCroppedFile(null)
     setPreview("")
+    setReplaceImage(true)
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -92,9 +107,11 @@ export default function TambahBeritaPage() {
   }
 
   async function handleSubmit(formData: FormData) {
-    if (croppedFile) {
-      formData.set('image', croppedFile)
+    if (replaceImage && croppedFile) {
+      formData.set("image", croppedFile)
+      formData.set("replaceImage", "on")
     }
+
     return formAction(formData)
   }
 
@@ -111,15 +128,17 @@ export default function TambahBeritaPage() {
           Workplace
         </p>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-          Tambah Berita
+          Edit Berita
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Tulis metadata berita, unggah cover, lalu edit isi inti berita dengan editor rich text.
+          Perbarui metadata, cover, dan isi inti berita.
         </p>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form ref={formRef} action={handleSubmit} className="space-y-6">
+          <input type="hidden" name="id" value={newsItem.id} />
+
           <div className="grid gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
             <div className="space-y-4">
               {preview ? (
@@ -191,14 +210,20 @@ export default function TambahBeritaPage() {
               <input type="hidden" name="slug" value={slug} />
 
               <Field label="Kategori">
-                <Input name="category" placeholder="Kategori" className="h-11 px-4" required />
+                <Input
+                  name="category"
+                  defaultValue={newsItem.category}
+                  placeholder="Kategori"
+                  className="h-11 px-4"
+                  required
+                />
               </Field>
 
               <Field label="Tanggal Publikasi">
                 <Input
                   name="publishedAt"
                   type="date"
-                  defaultValue={new Date().toISOString().split('T')[0]}
+                  defaultValue={newsItem.dateISO}
                   className="h-11 px-4"
                   required
                 />
@@ -207,6 +232,7 @@ export default function TambahBeritaPage() {
               <Field label="Ringkasan Berita">
                 <Textarea
                   name="excerpt"
+                  defaultValue={newsItem.excerpt}
                   placeholder="Ringkasan berita"
                   className="min-h-[8rem] px-4 py-4"
                   required
@@ -217,8 +243,8 @@ export default function TambahBeritaPage() {
 
           <Field label="Isi Inti Berita">
             <RichTextEditor
-              key={editorKey}
               name="bodyJson"
+              initialValue={newsItem.bodyJson}
               placeholder="Tulis isi inti berita..."
             />
           </Field>
@@ -240,7 +266,6 @@ export default function TambahBeritaPage() {
             <SubmitButton
               label="Simpan"
               pendingLabel="Menyimpan..."
-              croppedFile={croppedFile}
             />
           </div>
         </form>
@@ -260,11 +285,9 @@ export default function TambahBeritaPage() {
 function SubmitButton({
   label,
   pendingLabel,
-  croppedFile,
 }: {
   label: string
   pendingLabel: string
-  croppedFile: File | null
 }) {
   const { pending } = useFormStatus()
 
@@ -274,14 +297,14 @@ function SubmitButton({
       name="status"
       value="draft"
       className="h-10 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
-      disabled={pending || !croppedFile}
+      disabled={pending}
     >
       {pending ? pendingLabel : label}
     </Button>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-3">
       <label className="text-sm font-medium text-slate-900">{label}</label>

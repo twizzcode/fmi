@@ -37,11 +37,7 @@ function getUserRole(user: unknown) {
   return typeof role === "string" ? role : null;
 }
 
-export function SiteHeader({
-  initialUserImage,
-}: {
-  initialUserImage?: string | null
-}) {
+export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -50,7 +46,7 @@ export function SiteHeader({
   const { data: session, isPending } = authClient.useSession();
   const isAboutActive = aboutItems.some((item) => item.href === pathname);
   const user = session?.user;
-  const userImage = user?.image || initialUserImage || null;
+  const userImage = user?.image || null;
   const userName = user?.name?.trim() || "Pengguna FMI";
   const userEmail = user?.email || "";
   const userRole = getUserRole(user);
@@ -187,10 +183,13 @@ export function SiteHeader({
             <DropdownMenu>
               <DropdownMenuTrigger className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm outline-none transition hover:border-slate-300 hover:bg-slate-50">
                 {userImage ? (
-                  <img
+                  <Image
                     src={userImage}
                     alt={userName}
+                    width={44}
+                    height={44}
                     className="h-full w-full rounded-full object-cover"
+                    unoptimized
                   />
                 ) : (
                   userInitials
@@ -335,10 +334,13 @@ export function SiteHeader({
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-3">
                     {userImage ? (
-                      <img
+                      <Image
                         src={userImage}
                         alt={userName}
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded-full object-cover"
+                        unoptimized
                       />
                     ) : (
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3f679c] text-sm font-semibold text-white">

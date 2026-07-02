@@ -513,19 +513,13 @@ const dummyLookupService = {
 
 function useMentionLookupService(mentionString: string | null) {
   const [results, setResults] = useState<Array<string>>([]);
+  const cachedResults = useMemo(
+    () => (mentionString == null ? [] : mentionsCache.get(mentionString)),
+    [mentionString],
+  );
 
   useEffect(() => {
-    const cachedResults = mentionsCache.get(mentionString);
-
-    if (mentionString == null) {
-      setResults([]);
-      return;
-    }
-
-    if (cachedResults === null) {
-      return;
-    } else if (cachedResults !== undefined) {
-      setResults(cachedResults);
+    if (mentionString == null || cachedResults !== undefined) {
       return;
     }
 
@@ -534,9 +528,9 @@ function useMentionLookupService(mentionString: string | null) {
       mentionsCache.set(mentionString, newResults);
       setResults(newResults);
     });
-  }, [mentionString]);
+  }, [cachedResults, mentionString]);
 
-  return results;
+  return cachedResults ?? results;
 }
 
 function checkForAtSignMentions(
@@ -596,7 +590,7 @@ export function MentionsPlugin(): JSX.Element | null {
     () =>
       results
         .map(
-          (result) =>
+          (result: string) =>
             new MentionTypeaheadOption(
               result,
               <CircleUserRoundIcon className="size-4" />,
@@ -670,7 +664,7 @@ export function MentionsPlugin(): JSX.Element | null {
                 >
                   <CommandList>
                     <CommandGroup>
-                      {options.map((option, index) => (
+                      {options.map((option: MentionTypeaheadOption, index: number) => (
                         <CommandItem
                           key={option.key}
                           value={option.name}

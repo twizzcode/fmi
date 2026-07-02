@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
-import { getStructureCabinetHref, getStructurePageData } from "@/lib/structure"
+import {
+  getDefaultStructureCabinetId,
+  getStructureCabinetHref,
+} from "@/lib/structure"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   robots: {
@@ -13,7 +16,7 @@ export const metadata: Metadata = {
 }
 
 export default async function StructureIndexPage() {
-  const { defaultCabinetId } = await getStructurePageData()
+  const defaultCabinetId = await getDefaultStructureCabinetId()
 
   if (!defaultCabinetId) {
     redirect("/tentang-fmiunnes")

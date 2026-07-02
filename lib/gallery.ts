@@ -1,7 +1,8 @@
-import { asc, desc, eq, inArray } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm"
 
 import type { ImageItem } from "@/components/ui/image-gallery"
 import { db, schema } from "@/lib/db"
+import type { GalleryStatus } from "@/lib/db/schema"
 import { createSignedStorageUrl } from "@/lib/supabase/storage"
 
 export type GalleryVisual = {
@@ -59,6 +60,157 @@ export async function getGalleryActivities(userId?: string): Promise<GalleryActi
     .where(userId ? eq(schema.galleryEntries.userId, userId) : undefined)
     .orderBy(desc(schema.galleryEntries.eventDate), desc(schema.galleryEntries.createdAt))
 
+  return mapGalleryActivities(entries)
+}
+
+export async function getPaginatedGalleryActivities({
+  page,
+  pageSize,
+  userId,
+  status,
+}: {
+  page: number
+  pageSize: number
+  userId?: string
+  status?: GalleryStatus | "all"
+}) {
+  const currentPage = Math.max(1, page)
+  const offset = (currentPage - 1) * pageSize
+  const whereClause =
+    userId && status && status !== "all"
+      ? and(eq(schema.galleryEntries.userId, userId), eq(schema.galleryEntries.status, status))
+      : userId
+        ? eq(schema.galleryEntries.userId, userId)
+        : status && status !== "all"
+          ? eq(schema.galleryEntries.status, status)
+          : undefined
+
+  const [countResult, entries] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(schema.galleryEntries)
+      .where(whereClause),
+    db
+      .select()
+      .from(schema.galleryEntries)
+      .where(whereClause)
+      .orderBy(desc(schema.galleryEntries.eventDate), desc(schema.galleryEntries.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+  ])
+
+  return {
+    totalCount: countResult[0]?.count ?? 0,
+    items: await mapGalleryActivities(entries),
+  }
+}
+
+export async function getGalleryActivityById(id: string, userId?: string): Promise<GalleryActivity | null> {
+  const entries = await db
+    .select()
+    .from(schema.galleryEntries)
+    .where(
+      userId
+        ? and(eq(schema.galleryEntries.id, id), eq(schema.galleryEntries.userId, userId))
+        : eq(schema.galleryEntries.id, id)
+    )
+    .limit(1)
+
+  const [item] = await mapGalleryActivities(entries)
+
+  return item ?? null
+}
+
+export async function getGalleryPageActivities(): Promise<
+  Array<{
+    id: string
+    title: string
+    dateISO: string
+    formattedDate: string
+    images: ImageItem[]
+  }>
+> {
+  const entries = await db
+    .select({
+      id: schema.galleryEntries.id,
+      title: schema.galleryEntries.title,
+      eventDate: schema.galleryEntries.eventDate,
+    })
+    .from(schema.galleryEntries)
+    .where(eq(schema.galleryEntries.status, "approved"))
+    .orderBy(desc(schema.galleryEntries.eventDate), desc(schema.galleryEntries.createdAt))
+
+  if (entries.length === 0) {
+    return []
+  }
+
+  const photos = await db
+    .select({
+      id: schema.galleryPhotos.id,
+      galleryEntryId: schema.galleryPhotos.galleryEntryId,
+      storagePath: schema.galleryPhotos.storagePath,
+      sortOrder: schema.galleryPhotos.sortOrder,
+      createdAt: schema.galleryPhotos.createdAt,
+    })
+    .from(schema.galleryPhotos)
+    .where(
+      inArray(
+        schema.galleryPhotos.galleryEntryId,
+        entries.map((entry) => entry.id)
+      )
+    )
+    .orderBy(
+      asc(schema.galleryPhotos.galleryEntryId),
+      asc(schema.galleryPhotos.sortOrder),
+      asc(schema.galleryPhotos.createdAt)
+    )
+
+  const photoMap = new Map<string, typeof photos>()
+  for (const photo of photos) {
+    const existing = photoMap.get(photo.galleryEntryId) ?? []
+    existing.push(photo)
+    photoMap.set(photo.galleryEntryId, existing)
+  }
+
+  const signedUrlMap = new Map<string, string | null>()
+  await Promise.all(
+    photos.map(async (photo) => {
+      if (signedUrlMap.has(photo.storagePath)) {
+        return
+      }
+
+      try {
+        const url = await createSignedStorageUrl(photo.storagePath)
+        signedUrlMap.set(photo.storagePath, url)
+      } catch {
+        signedUrlMap.set(photo.storagePath, null)
+      }
+    })
+  )
+
+  return entries
+    .map((entry) => {
+      const entryPhotos = photoMap.get(entry.id) ?? []
+
+      return {
+        id: entry.id,
+        title: entry.title,
+        dateISO: entry.eventDate.toISOString().slice(0, 10),
+        formattedDate: formatGalleryDate(entry.eventDate),
+        images: entryPhotos
+          .map<ImageItem>((photo, index) => ({
+            src: signedUrlMap.get(photo.storagePath) ?? "",
+            alt: `${entry.title} ${index + 1}`,
+          }))
+          .filter((photo) => photo.src),
+      }
+    })
+    .filter((activity) => activity.images.length > 0)
+}
+
+async function mapGalleryActivities(
+  entries: Array<typeof schema.galleryEntries.$inferSelect>
+): Promise<GalleryActivity[]> {
   if (entries.length === 0) {
     return []
   }
@@ -137,35 +289,6 @@ export async function getGalleryActivities(userId?: string): Promise<GalleryActi
       })),
     }
   })
-}
-
-export async function getGalleryPageActivities(): Promise<
-  Array<{
-    id: string
-    title: string
-    dateISO: string
-    formattedDate: string
-    images: ImageItem[]
-  }>
-> {
-  const activities = (await getGalleryActivities().catch(() => [])).filter(
-    (activity) => activity.status === "approved"
-  )
-
-  return activities
-    .map((activity) => ({
-      id: activity.id,
-      title: activity.title,
-      dateISO: activity.eventDateValue,
-      formattedDate: activity.eventDateLabel,
-      images: activity.photos
-        .filter((photo) => photo.url)
-        .map<ImageItem>((photo) => ({
-          src: photo.url ?? "",
-          alt: photo.alt,
-        })),
-    }))
-    .filter((activity) => activity.images.length > 0)
 }
 
 function formatGalleryDate(date: Date) {

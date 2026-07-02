@@ -13,7 +13,7 @@ import { BlurFade } from "@/components/ui/blur-fade";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "Beranda",
@@ -43,6 +43,7 @@ export default async function Home() {
             alt="Kegiatan FMI"
             fill
             priority
+            sizes="100vw"
             className="object-cover brightness-[0.35]"
           />
         </div>
@@ -212,6 +213,7 @@ export default async function Home() {
                         src={item.imageUrl}
                         alt={item.title}
                         fill
+                        sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
                         className="object-cover transition duration-300 group-hover:scale-105"
                       />
                     </div>

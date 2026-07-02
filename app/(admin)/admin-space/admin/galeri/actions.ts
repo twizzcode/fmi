@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { eq, inArray } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 
 import { auth, getSessionUserRole } from "@/lib/auth"
 import { canAccessAdmin } from "@/lib/app-config"

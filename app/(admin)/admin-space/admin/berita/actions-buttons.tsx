@@ -28,7 +28,7 @@ const initialState: NewsAdminActionState = {
 }
 
 export function PublishNewsButton({ newsId }: { newsId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     publishNewsAction,
     initialState
   )
@@ -59,7 +59,7 @@ function PublishSubmitButton() {
 }
 
 export function UnpublishNewsButton({ newsId }: { newsId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     unpublishNewsAction,
     initialState
   )
@@ -90,7 +90,7 @@ function UnpublishSubmitButton() {
 }
 
 export function DeleteNewsButton({ newsId }: { newsId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     deleteNewsAdminAction,
     initialState
   )

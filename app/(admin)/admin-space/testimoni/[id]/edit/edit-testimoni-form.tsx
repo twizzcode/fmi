@@ -7,43 +7,46 @@ import { useRouter } from "next/navigation"
 import { ImageUpIcon, ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 
-import { createTestimonialAction, type TestimonialActionState } from "@/app/(admin)/admin-space/testimoni/actions"
+import { updateTestimonialAction, type TestimonialActionState } from "@/app/(admin)/admin-space/testimoni/actions"
 import { Button } from "@/components/ui/button"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import type { TestimonialView } from "@/lib/testimonials"
 
 const initialTestimonialActionState: TestimonialActionState = {
   error: null,
   success: null,
 }
 
-export default function TambahTestimoniPage() {
+export function EditTestimoniForm({ testimonial }: { testimonial: TestimonialView }) {
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [previewUrl, setPreviewUrl] = useState("")
+  const [replaceImage, setReplaceImage] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState(testimonial.imageUrl ?? "")
   const [cropDialogOpen, setCropDialogOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [croppedFile, setCroppedFile] = useState<File | null>(null)
   const [state, formAction] = useActionState(
-    createTestimonialAction,
+    updateTestimonialAction,
     initialTestimonialActionState
   )
 
   useEffect(() => {
     if (state.success) {
+      formRef.current?.reset()
       router.push("/testimoni")
     }
   }, [state.success, router])
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl && previewUrl !== testimonial.imageUrl) {
         URL.revokeObjectURL(previewUrl)
       }
     }
-  }, [previewUrl])
+  }, [previewUrl, testimonial.imageUrl])
 
   function handleFileSelection(file: File | null) {
     if (!file) {
@@ -55,23 +58,29 @@ export default function TambahTestimoniPage() {
   }
 
   function handleCropComplete(nextCroppedFile: File) {
-    if (previewUrl) {
+    if (previewUrl && previewUrl !== testimonial.imageUrl) {
       URL.revokeObjectURL(previewUrl)
     }
 
     setCroppedFile(nextCroppedFile)
     setPreviewUrl(URL.createObjectURL(nextCroppedFile))
+    setReplaceImage(true)
     setSelectedFile(null)
   }
 
-  function handleRemoveSelectedImage() {
-    if (previewUrl) {
+  function clearCurrentImageState() {
+    if (previewUrl && previewUrl !== testimonial.imageUrl) {
       URL.revokeObjectURL(previewUrl)
     }
 
     setPreviewUrl("")
+    setReplaceImage(true)
     setSelectedFile(null)
     setCroppedFile(null)
+  }
+
+  function handleRemoveSelectedImage() {
+    clearCurrentImageState()
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -79,13 +88,14 @@ export default function TambahTestimoniPage() {
   }
 
   function handleReplaceImage() {
-    handleRemoveSelectedImage()
+    clearCurrentImageState()
     fileInputRef.current?.click()
   }
 
   async function handleSubmit(formData: FormData) {
-    if (croppedFile) {
+    if (replaceImage && croppedFile) {
       formData.set("image", croppedFile)
+      formData.set("replaceImage", "on")
     }
 
     return formAction(formData)
@@ -104,7 +114,7 @@ export default function TambahTestimoniPage() {
           Konten
         </p>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-          Tambah Testimoni
+          Edit Testimoni
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
           Isi nama, jabatan, kutipan, lalu unggah foto untuk ditampilkan di halaman publik.
@@ -113,6 +123,8 @@ export default function TambahTestimoniPage() {
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form ref={formRef} action={handleSubmit} className="space-y-6">
+          <input type="hidden" name="id" value={testimonial.id} />
+
           <div className="grid gap-6 md:grid-cols-[280px_minmax(0,1fr)]">
             <div className="space-y-4">
               {previewUrl ? (
@@ -127,14 +139,16 @@ export default function TambahTestimoniPage() {
                 </div>
               ) : null}
               <div className="space-y-3">
+                <input type="hidden" name="replaceImage" value={replaceImage ? "on" : "off"} />
                 <Input
                   ref={fileInputRef}
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/gif"
                   className="hidden"
-                  onChange={(event) =>
-                    handleFileSelection(event.target.files?.[0] ?? null)
-                  }
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    handleFileSelection(file)
+                  }}
                 />
                 {!previewUrl ? (
                   <div className="flex aspect-square items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6">
@@ -178,6 +192,7 @@ export default function TambahTestimoniPage() {
                 </label>
                 <Input
                   name="name"
+                  defaultValue={testimonial.name}
                   placeholder="Masukkan nama lengkap"
                   className="h-11 px-3"
                   required
@@ -190,6 +205,7 @@ export default function TambahTestimoniPage() {
                 </label>
                 <Input
                   name="designation"
+                  defaultValue={testimonial.designation}
                   placeholder="Masukkan jabatan"
                   className="h-11 px-3"
                   required
@@ -202,6 +218,7 @@ export default function TambahTestimoniPage() {
                 </label>
                 <Textarea
                   name="quote"
+                  defaultValue={testimonial.quote}
                   placeholder="Tulis isi testimoni"
                   className="min-h-[12rem] px-4 py-4"
                   required
@@ -249,7 +266,7 @@ function SubmitButton() {
       className="bg-[#3f679c] text-white hover:bg-[#355887]"
       disabled={pending}
     >
-      {pending ? "Menyimpan..." : "Simpan Testimoni"}
+      {pending ? "Menyimpan..." : "Simpan Perubahan"}
     </Button>
   )
 }

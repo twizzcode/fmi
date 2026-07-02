@@ -33,27 +33,28 @@ export default async function DashboardPage() {
     galleryCountResult,
     memberCountResult,
     newsCountResult,
-    totalViewsResult,
-    viewsTodayResult,
+    viewStatsResult,
     recentNewsRows,
     recentGalleryRows,
     recentMemberRows,
+    userGrowthRows,
+    latestNews,
   ] = await Promise.all([
     db.select({ count: sql<number>`count(*)::int` }).from(schema.users),
     db.select({ count: sql<number>`count(*)::int` }).from(schema.galleryEntries),
     db.select({ count: sql<number>`count(*)::int` }).from(schema.structureMembers),
     db.select({ count: sql<number>`count(*)::int` }).from(schema.newsArticles),
-    db.select({ total: sql<number>`coalesce(sum(${schema.newsArticles.views}), 0)::int` }).from(
-      schema.newsArticles
-    ),
     db
-      .select({ total: sql<number>`coalesce(sum(${schema.newsArticles.views}), 0)::int` })
-      .from(schema.newsArticles)
-      .where(gte(schema.newsArticles.updatedAt, todayStart)),
+      .select({
+        totalViews: sql<number>`coalesce(sum(${schema.newsArticles.views}), 0)::int`,
+        viewsToday: sql<number>`coalesce(sum(case when ${schema.newsArticles.updatedAt} >= ${todayStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
+        viewsLast30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.createdAt} >= ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
+        viewsPrevious30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.createdAt} >= ${previous30DaysStart} and ${schema.newsArticles.createdAt} < ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
+      })
+      .from(schema.newsArticles),
     db
       .select({
         createdAt: schema.newsArticles.createdAt,
-        views: schema.newsArticles.views,
       })
       .from(schema.newsArticles)
       .where(gte(schema.newsArticles.createdAt, previous30DaysStart)),
@@ -65,14 +66,31 @@ export default async function DashboardPage() {
       .select({ createdAt: schema.structureMembers.createdAt })
       .from(schema.structureMembers)
       .where(gte(schema.structureMembers.createdAt, previous30DaysStart)),
+    db
+      .select({ createdAt: schema.users.createdAt })
+      .from(schema.users)
+      .where(gte(schema.users.createdAt, previous30DaysStart)),
+    db
+      .select({
+        id: schema.newsArticles.id,
+        title: schema.newsArticles.title,
+        views: schema.newsArticles.views,
+        publishedAt: schema.newsArticles.publishedAt,
+        status: schema.newsArticles.status,
+      })
+      .from(schema.newsArticles)
+      .orderBy(desc(schema.newsArticles.publishedAt))
+      .limit(5),
   ])
 
   const totalUsers = userCountResult[0]?.count ?? 0
   const totalGalleries = galleryCountResult[0]?.count ?? 0
   const totalMembers = memberCountResult[0]?.count ?? 0
   const totalNews = newsCountResult[0]?.count ?? 0
-  const totalViews = totalViewsResult[0]?.total ?? 0
-  const viewsToday = viewsTodayResult[0]?.total ?? 0
+  const totalViews = viewStatsResult[0]?.totalViews ?? 0
+  const viewsToday = viewStatsResult[0]?.viewsToday ?? 0
+  const viewsLast30Days = viewStatsResult[0]?.viewsLast30Days ?? 0
+  const viewsPrevious30Days = viewStatsResult[0]?.viewsPrevious30Days ?? 0
 
   const chartLabels = Array.from({ length: 4 }, (_, index) => {
     const start = addDays(previous30DaysStart, index * 15)
@@ -94,68 +112,12 @@ export default async function DashboardPage() {
     news: 0,
   }))
 
-  for (const row of recentNewsRows) {
-    const index = chartLabels.findIndex(
-      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
-    )
-    if (index >= 0) {
-      chartData[index].news += 1
-    }
-  }
-
-  for (const row of recentGalleryRows) {
-    const index = chartLabels.findIndex(
-      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
-    )
-    if (index >= 0) {
-      chartData[index].galleries += 1
-    }
-  }
-
-  for (const row of recentMemberRows) {
-    const index = chartLabels.findIndex(
-      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
-    )
-    if (index >= 0) {
-      chartData[index].members += 1
-    }
-  }
-
-  const userGrowthRows = await db
-    .select({ createdAt: schema.users.createdAt })
-    .from(schema.users)
-    .where(gte(schema.users.createdAt, previous30DaysStart))
-
-  for (const row of userGrowthRows) {
-    const index = chartLabels.findIndex(
-      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
-    )
-    if (index >= 0) {
-      chartData[index].users += 1
-    }
-  }
-
-  const viewsLast30Days = recentNewsRows
-    .filter((row) => row.createdAt >= last30DaysStart)
-    .reduce((sum, row) => sum + row.views, 0)
-
-  const viewsPrevious30Days = recentNewsRows
-    .filter((row) => row.createdAt >= previous30DaysStart && row.createdAt < last30DaysStart)
-    .reduce((sum, row) => sum + row.views, 0)
+  incrementChartBucket(chartData, chartLabels, recentNewsRows, "news")
+  incrementChartBucket(chartData, chartLabels, recentGalleryRows, "galleries")
+  incrementChartBucket(chartData, chartLabels, recentMemberRows, "members")
+  incrementChartBucket(chartData, chartLabels, userGrowthRows, "users")
 
   const viewTrend = viewsLast30Days - viewsPrevious30Days
-
-  const latestNews = await db
-    .select({
-      id: schema.newsArticles.id,
-      title: schema.newsArticles.title,
-      views: schema.newsArticles.views,
-      publishedAt: schema.newsArticles.publishedAt,
-      status: schema.newsArticles.status,
-    })
-    .from(schema.newsArticles)
-    .orderBy(desc(schema.newsArticles.publishedAt))
-    .limit(5)
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -260,6 +222,29 @@ export default async function DashboardPage() {
       </section>
     </div>
   )
+}
+
+function incrementChartBucket(
+  chartData: Array<{
+    label: string
+    users: number
+    galleries: number
+    members: number
+    news: number
+  }>,
+  chartLabels: Array<{ start: Date; end: Date }>,
+  rows: Array<{ createdAt: Date }>,
+  key: "users" | "galleries" | "members" | "news"
+) {
+  for (const row of rows) {
+    const index = chartLabels.findIndex(
+      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
+    )
+
+    if (index >= 0) {
+      chartData[index][key] += 1
+    }
+  }
 }
 
 function MetricCard({

@@ -1,15 +1,8 @@
+import Image from "next/image"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { GalleryFilterTabs } from "@/components/admin/gallery-filter-tabs"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { AdminPagination } from "@/components/admin/admin-pagination"
 import {
   Table,
   TableBody,
@@ -18,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getGalleryActivities } from "@/lib/gallery"
+import { getPaginatedGalleryActivities } from "@/lib/gallery"
 import { ApproveGalleryButton, RejectGalleryButton, DeleteGalleryButton } from "./actions-buttons"
 
 export default async function AdminGaleriManagementPage({
@@ -27,24 +20,30 @@ export default async function AdminGaleriManagementPage({
   searchParams: Promise<{ tab?: string; page?: string }>
 }) {
   const params = await searchParams
-  const currentTab = params.tab || "all"
+  const currentTab =
+    params.tab === "pending" || params.tab === "approved" || params.tab === "rejected"
+      ? params.tab
+      : "all"
   const currentPage = Number(params.page) || 1
   const itemsPerPage = 10
 
-  const items = await getGalleryActivities()
-  const filteredItems =
-    currentTab === "pending"
-      ? items.filter((item) => item.status === "pending")
-      : currentTab === "approved"
-        ? items.filter((item) => item.status === "approved")
-        : currentTab === "rejected"
-          ? items.filter((item) => item.status === "rejected")
-          : items
-
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedItems = filteredItems.slice(startIndex, endIndex)
+  const { items, totalCount } = await getPaginatedGalleryActivities({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    status: currentTab,
+  })
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const paginatedItems =
+    safeCurrentPage === currentPage
+      ? items
+      : (
+          await getPaginatedGalleryActivities({
+            page: safeCurrentPage,
+            pageSize: itemsPerPage,
+            status: currentTab,
+          })
+        ).items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -53,7 +52,7 @@ export default async function AdminGaleriManagementPage({
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Daftar Galeri</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {filteredItems.length} galeri ditemukan
+              {totalCount} galeri ditemukan
             </p>
           </div>
 
@@ -63,81 +62,18 @@ export default async function AdminGaleriManagementPage({
         <GalleryTable items={paginatedItems} />
 
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={
-                    currentPage > 1
-                      ? `/admin/galeri?tab=${currentTab}&page=${currentPage - 1}`
-                      : "#"
-                  }
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => i + 1).map((page) => {
-                if (totalPages === 0) {
-                  return (
-                    <PaginationItem key={1}>
-                      <PaginationLink href={`/admin/galeri?tab=${currentTab}&page=1`} isActive>
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href={`/admin/galeri?tab=${currentTab}&page=${page}`}
-                        isActive={currentPage === page}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )
-                }
-
-                return null
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href={
-                    currentPage < totalPages
-                      ? `/admin/galeri?tab=${currentTab}&page=${currentPage + 1}`
-                      : "#"
-                  }
-                  className={
-                    currentPage >= totalPages || totalPages === 0
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) => `/admin/galeri?tab=${currentTab}&page=${page}`}
+          />
         </div>
       </section>
     </div>
   )
 }
 
-type GalleryActivity = Awaited<ReturnType<typeof getGalleryActivities>>[number]
+type GalleryActivity = Awaited<ReturnType<typeof getPaginatedGalleryActivities>>["items"][number]
 
 function GalleryTable({ items }: { items: GalleryActivity[] }) {
   return (
@@ -164,13 +100,14 @@ function GalleryTable({ items }: { items: GalleryActivity[] }) {
             items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell>
-                  <div className="h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
+                  <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
                     {item.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={item.coverImageUrl}
                         alt={item.title}
-                        className="h-full w-full object-cover"
+                        fill
+                        unoptimized
+                        className="object-cover"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-slate-400">

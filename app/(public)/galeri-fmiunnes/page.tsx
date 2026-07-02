@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { GalleryPageContent } from "@/components/gallery/gallery-page-content"
 import { getGalleryPageActivities } from "@/lib/gallery"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "Galeri FMI UNNES",

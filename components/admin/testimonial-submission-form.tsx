@@ -1,6 +1,7 @@
 "use client"
 
-import { useActionState, useEffect, useRef, useState } from "react"
+import Image from "next/image"
+import { useActionState, useEffect, useMemo, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { ImageIcon } from "lucide-react"
 
@@ -29,24 +30,18 @@ export function TestimonialSubmissionForm() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [croppedFile, setCroppedFile] = useState<File | null>(null)
   const [cropperOpen, setCropperOpen] = useState(false)
-  const [preview, setPreview] = useState<string>("")
+  const preview = useMemo(
+    () => (croppedFile ? URL.createObjectURL(croppedFile) : ""),
+    [croppedFile]
+  )
 
   useEffect(() => {
-    if (state.success) {
-      formRef.current?.reset()
-      setSelectedFile(null)
-      setCroppedFile(null)
-      setPreview("")
+    return () => {
+      if (preview) {
+        URL.revokeObjectURL(preview)
+      }
     }
-  }, [state.success])
-
-  useEffect(() => {
-    if (croppedFile) {
-      const objectUrl = URL.createObjectURL(croppedFile)
-      setPreview(objectUrl)
-      return () => URL.revokeObjectURL(objectUrl)
-    }
-  }, [croppedFile])
+  }, [preview])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -64,6 +59,17 @@ export function TestimonialSubmissionForm() {
       fileInputRef.current.files = dataTransfer.files
     }
   }
+
+  useEffect(() => {
+    if (!state.success) return
+
+    formRef.current?.reset()
+    setSelectedFile(null)
+    setCroppedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }, [state.success])
 
   return (
     <>
@@ -116,25 +122,27 @@ export function TestimonialSubmissionForm() {
           
           {preview && (
             <div className="flex items-center gap-4">
-              <div className="size-24 overflow-hidden rounded-lg border-2 border-slate-200 bg-slate-50">
-                <img
+              <div className="relative size-24 overflow-hidden rounded-lg border-2 border-slate-200 bg-slate-50">
+                <Image
                   src={preview}
                   alt="Preview"
-                  className="size-full object-cover"
+                  fill
+                  unoptimized
+                  className="object-cover"
                 />
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setSelectedFile(null)
-                  setCroppedFile(null)
-                  setPreview("")
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = ""
-                  }
-                }}
+                 onClick={() => {
+                   setSelectedFile(null)
+                   setCroppedFile(null)
+                   if (fileInputRef.current) {
+                     fileInputRef.current.value = ""
+                   }
+                 }}
+
               >
                 Ganti Foto
               </Button>

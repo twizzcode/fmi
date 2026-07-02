@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { $createHeadingNode, $createQuoteNode, HeadingNode, QuoteNode } from "@lexical/rich-text"
 import { ListItemNode, ListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, REMOVE_LIST_COMMAND } from "@lexical/list"
@@ -60,10 +60,6 @@ export function RichTextEditor({
   const [value, setValue] = useState(
     initialValue ?? JSON.stringify(emptyEditorState)
   )
-
-  useEffect(() => {
-    setValue(initialValue ?? JSON.stringify(emptyEditorState))
-  }, [initialValue])
 
   const initialConfig = useMemo(
     () => ({

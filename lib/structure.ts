@@ -121,6 +121,24 @@ export async function getStructureCabinets() {
   )
 }
 
+export async function getStructureCabinetIds() {
+  const cabinets = await db
+    .select({
+      id: schema.structureCabinets.id,
+      isDefault: schema.structureCabinets.isDefault,
+    })
+    .from(schema.structureCabinets)
+    .orderBy(asc(schema.structureCabinets.createdAt))
+
+  return cabinets
+}
+
+export async function getDefaultStructureCabinetId() {
+  const cabinets = await getStructureCabinetIds()
+
+  return cabinets.find((cabinet) => cabinet.isDefault)?.id ?? cabinets[0]?.id ?? ""
+}
+
 export async function getStructurePageData() {
   const cabinets = await getStructureCabinets()
   const defaultCabinetId =

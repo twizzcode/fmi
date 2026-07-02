@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useRef, useState } from "react"
+import { useActionState, useEffect, useRef } from "react"
 import { useFormStatus } from "react-dom"
 
 import { createNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/berita/actions"
@@ -16,7 +16,6 @@ const initialNewsActionState: NewsActionState = {
 
 export function NewsForm() {
   const formRef = useRef<HTMLFormElement>(null)
-  const [editorKey, setEditorKey] = useState(0)
   const [state, formAction] = useActionState(
     createNewsArticleAction,
     initialNewsActionState
@@ -25,7 +24,6 @@ export function NewsForm() {
   useEffect(() => {
     if (state.success) {
       formRef.current?.reset()
-      setEditorKey((current) => current + 1)
     }
   }, [state.success])
 
@@ -91,7 +89,7 @@ export function NewsForm() {
       <div className="mt-4">
         <Field label="Isi Inti Berita">
           <RichTextEditor
-            key={editorKey}
+            key={state.success ?? "news-form"}
             name="bodyJson"
             placeholder="Tulis isi inti berita..."
           />

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
@@ -7,15 +8,7 @@ import { auth, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { DeleteTestimonialButton } from "@/components/admin/delete-testimonial-button"
 import { deleteTestimonialAction } from "@/app/(admin)/admin-space/testimoni/actions"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
+import { AdminPagination } from "@/components/admin/admin-pagination"
 import {
   Table,
   TableBody,
@@ -24,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getTestimonialsWithImageUrls } from "@/lib/testimonials"
+import { getPaginatedTestimonialsWithImageUrls } from "@/lib/testimonials"
 
 export default async function AdminTestimoniPage({
   searchParams,
@@ -43,14 +36,24 @@ export default async function AdminTestimoniPage({
   const currentPage = Number(params.page) || 1
   const itemsPerPage = 10
 
-  const testimonials = await getTestimonialsWithImageUrls(
-    getSessionUserRole(session) === "admin" || getSessionUserRole(session) === "developer"
-      ? undefined
-      : session.user.id
-  )
-  const totalPages = Math.ceil(testimonials.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedTestimonials = testimonials.slice(startIndex, startIndex + itemsPerPage)
+  const role = getSessionUserRole(session)
+  const { items: testimonials, totalCount } = await getPaginatedTestimonialsWithImageUrls({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+  })
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const paginatedTestimonials =
+    safeCurrentPage === currentPage
+      ? testimonials
+      : (
+          await getPaginatedTestimonialsWithImageUrls({
+            page: safeCurrentPage,
+            pageSize: itemsPerPage,
+            userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+          })
+        ).items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -60,9 +63,10 @@ export default async function AdminTestimoniPage({
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Testimoni
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              {testimonials.length} testimoni tersimpan.
-            </p>
+              <p className="mt-2 text-sm text-slate-500">
+               {totalCount} testimoni tersimpan.
+             </p>
+
           </div>
           <Button
             asChild
@@ -70,7 +74,7 @@ export default async function AdminTestimoniPage({
             size="lg"
             className="rounded-xl bg-white px-4 shadow-sm hover:bg-slate-50"
           >
-            <Link href="testimoni/tambah">
+            <Link href="testimoni/tambah" prefetch={false}>
               <PlusCircleIcon className="mr-2 size-4" />
               Tambah Testimoni
             </Link>
@@ -107,13 +111,14 @@ export default async function AdminTestimoniPage({
                 paginatedTestimonials.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                      <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
                         {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             src={item.imageUrl}
                             alt={item.name}
-                            className="h-full w-full object-cover"
+                            fill
+                            unoptimized
+                            className="object-cover"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-xs text-slate-400">
@@ -140,7 +145,7 @@ export default async function AdminTestimoniPage({
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="icon-sm" asChild>
-                          <Link href={`/testimoni/${item.id}/edit`}>
+                          <Link href={`/testimoni/${item.id}/edit`} prefetch={false}>
                             <PencilIcon className="size-4" />
                           </Link>
                         </Button>
@@ -159,63 +164,11 @@ export default async function AdminTestimoniPage({
         </div>
 
         <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href={currentPage > 1 ? `/testimoni?page=${currentPage - 1}` : "#"}
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: Math.max(totalPages, 1) }, (_, i) => i + 1).map((page) => {
-                if (totalPages === 0) {
-                  return (
-                    <PaginationItem key={1}>
-                      <PaginationLink href="/testimoni?page=1" isActive>
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink href={`/testimoni?page=${page}`} isActive={currentPage === page}>
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                }
-
-                if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  )
-                }
-
-                return null
-              })}
-
-              <PaginationItem>
-                <PaginationNext
-                  href={currentPage < totalPages ? `/testimoni?page=${currentPage + 1}` : "#"}
-                  className={
-                    currentPage >= totalPages || totalPages === 0
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) => `/testimoni?page=${page}`}
+          />
         </div>
         </>
       </section>

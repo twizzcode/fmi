@@ -49,7 +49,7 @@ export async function GET(
     }
 
     return NextResponse.json(newsArticle)
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Gagal mengambil data berita" },
       { status: 500 }

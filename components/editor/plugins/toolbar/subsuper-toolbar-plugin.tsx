@@ -20,9 +20,7 @@ export function SubSuperToolbarPlugin() {
 
   const $updateToolbar = (selection: BaseSelection) => {
     if ($isRangeSelection(selection) || $isTableSelection(selection)) {
-      // @ts-ignore
       setIsSubscript(selection.hasFormat("subscript"));
-      // @ts-ignore
       setIsSuperscript(selection.hasFormat("superscript"));
     }
   };

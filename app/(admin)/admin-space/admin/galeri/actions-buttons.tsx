@@ -28,7 +28,7 @@ const initialState: GalleryAdminActionState = {
 }
 
 export function ApproveGalleryButton({ galleryId }: { galleryId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     approveGalleryAction,
     initialState
   )
@@ -59,7 +59,7 @@ function ApproveSubmitButton() {
 }
 
 export function RejectGalleryButton({ galleryId }: { galleryId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     rejectGalleryAction,
     initialState
   )
@@ -90,7 +90,7 @@ function RejectSubmitButton() {
 }
 
 export function DeleteGalleryButton({ galleryId }: { galleryId: string }) {
-  const [_state, formAction] = useActionState(
+  const [, formAction] = useActionState(
     deleteGalleryAdminAction,
     initialState
   )

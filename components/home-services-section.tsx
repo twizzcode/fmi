@@ -1,4 +1,3 @@
-import { connection } from "next/server"
 import { FileTextIcon, GlobeIcon, RocketIcon, BackpackIcon } from "@radix-ui/react-icons"
 
 import { BlurFade } from "@/components/ui/blur-fade"
@@ -9,8 +8,6 @@ import { getServicesWithImageUrls } from "@/lib/services"
 const featureIcons = [FileTextIcon, RocketIcon, GlobeIcon, BackpackIcon]
 
 export async function HomeServicesSection() {
-  await connection()
-
   const servicesFromDb = await getServicesWithImageUrls().catch(() => [])
 
   const services =

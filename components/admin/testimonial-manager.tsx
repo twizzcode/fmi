@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useActionState, useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import {
@@ -66,12 +67,14 @@ export function TestimonialManager({
           key={item.id}
           className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
         >
-          <div className="aspect-square bg-slate-100">
+          <div className="relative aspect-square bg-slate-100">
             {item.imageUrl ? (
-              <img
+              <Image
                 src={item.imageUrl}
                 alt={item.name}
-                className="h-full w-full object-cover"
+                fill
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -215,12 +218,14 @@ function EditDialogContent({
         <div className="grid flex-1 gap-5 overflow-y-auto px-6 py-2">
           <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
             <div className="space-y-3">
-              <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
+              <div className="relative aspect-square overflow-hidden rounded-2xl bg-slate-100">
                 {previewUrl ? (
-                  <img
+                  <Image
                     src={previewUrl}
                     alt={item.name}
-                    className="h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">

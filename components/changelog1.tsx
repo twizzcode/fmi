@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -136,9 +137,11 @@ const Changelog1 = ({
                   </ul>
                 )}
                 {entry.image && (
-                  <img
+                  <Image
                     src={entry.image}
                     alt={`${entry.version} visual`}
+                    width={1200}
+                    height={675}
                     className="mt-8 w-full rounded-lg object-cover"
                   />
                 )}

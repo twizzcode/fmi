@@ -1,11 +1,7 @@
-import { connection } from "next/server"
-
 import { AnimatedTestimonials } from "@/components/ui/animated-testimonials"
 import { getApprovedTestimonialsWithImageUrls } from "@/lib/testimonials"
 
 export default async function AnimatedTestimonialsDemo() {
-  await connection()
-
   const testimonialsFromDb = await getApprovedTestimonialsWithImageUrls().catch(
     () => []
   )
