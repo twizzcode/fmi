@@ -28,6 +28,15 @@ export default async function DashboardPage() {
   const last30DaysStart = subtractDays(todayStart, 29)
   const previous30DaysStart = subtractDays(last30DaysStart, 30)
 
+  const emptyViewStats = [
+    {
+      totalViews: 0,
+      viewsToday: 0,
+      viewsLast30Days: 0,
+      viewsPrevious30Days: 0,
+    },
+  ]
+
   const [
     userCountResult,
     galleryCountResult,
@@ -47,17 +56,25 @@ export default async function DashboardPage() {
     db
       .select({
         totalViews: sql<number>`coalesce(sum(${schema.newsArticles.views}), 0)::int`,
-        viewsToday: sql<number>`coalesce(sum(case when ${schema.newsArticles.updatedAt} >= ${todayStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
-        viewsLast30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.createdAt} >= ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
-        viewsPrevious30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.createdAt} >= ${previous30DaysStart} and ${schema.newsArticles.createdAt} < ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
-      })
-      .from(schema.newsArticles),
-    db
-      .select({
-        createdAt: schema.newsArticles.createdAt,
+        viewsToday: sql<number>`coalesce(sum(case when ${schema.newsArticles.publishedAt} >= ${todayStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
+        viewsLast30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.publishedAt} >= ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
+        viewsPrevious30Days: sql<number>`coalesce(sum(case when ${schema.newsArticles.publishedAt} >= ${previous30DaysStart} and ${schema.newsArticles.publishedAt} < ${last30DaysStart} then ${schema.newsArticles.views} else 0 end), 0)::int`,
       })
       .from(schema.newsArticles)
-      .where(gte(schema.newsArticles.createdAt, previous30DaysStart)),
+      .catch((error) => {
+        console.error("dashboard news view stats query failed", error)
+        return emptyViewStats
+      }),
+    db
+      .select({
+        createdAt: schema.newsArticles.publishedAt,
+      })
+      .from(schema.newsArticles)
+      .where(gte(schema.newsArticles.publishedAt, previous30DaysStart))
+      .catch((error) => {
+        console.error("dashboard recent news query failed", error)
+        return []
+      }),
     db
       .select({ createdAt: schema.galleryEntries.createdAt })
       .from(schema.galleryEntries)
@@ -80,7 +97,11 @@ export default async function DashboardPage() {
       })
       .from(schema.newsArticles)
       .orderBy(desc(schema.newsArticles.publishedAt))
-      .limit(5),
+      .limit(5)
+      .catch((error) => {
+        console.error("dashboard latest news query failed", error)
+        return []
+      }),
   ])
 
   const totalUsers = userCountResult[0]?.count ?? 0

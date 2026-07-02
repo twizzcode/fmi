@@ -64,6 +64,7 @@ export function TestimonialSubmissionForm() {
     if (!state.success) return
 
     formRef.current?.reset()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedFile(null)
     setCroppedFile(null)
     if (fileInputRef.current) {
