@@ -13,10 +13,15 @@ function createDb() {
     throw new Error("DATABASE_URL is missing.")
   }
 
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build'
+  
   const client =
     globalForDb.postgresClient ??
     postgres(process.env.DATABASE_URL, {
       prepare: false,
+      max: isBuildTime ? 1 : 10,
+      idle_timeout: 20,
+      connect_timeout: 10,
     })
 
   if (process.env.NODE_ENV !== "production") {
