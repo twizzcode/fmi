@@ -168,6 +168,8 @@ export async function getPaginatedAdminNewsArticles({
     db
       .select({
         article: schema.newsArticles,
+        authorName: schema.users.name,
+        authorRole: schema.users.role,
         authorImage: schema.users.image,
         authorUploadedImagePath: schema.users.uploadedImagePath,
       })
