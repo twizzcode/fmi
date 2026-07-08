@@ -1,0 +1,203 @@
+import Image from "next/image"
+import Link from "next/link"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
+import { CheckIcon, PencilIcon, PlusCircleIcon, XIcon } from "lucide-react"
+
+import { auth, getSessionUserRole } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { DeleteTestimonialButton } from "@/components/admin/delete-testimonial-button"
+import { deleteTestimonialAction } from "@/app/(admin)/admin-space/workspace/testimoni/actions"
+import { AdminPagination } from "@/components/admin/admin-pagination"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { getPaginatedTestimonialsWithImageUrls } from "@/lib/testimonials"
+
+export default async function AdminTestimoniPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  if (!session) {
+    redirect("/login")
+  }
+
+  const params = await searchParams
+  const currentPage = Number(params.page) || 1
+  const itemsPerPage = 10
+
+  const role = getSessionUserRole(session)
+  const { items: testimonials, totalCount } = await getPaginatedTestimonialsWithImageUrls({
+    page: currentPage,
+    pageSize: itemsPerPage,
+    userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+  })
+  const totalPages = Math.ceil(totalCount / itemsPerPage)
+  const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
+  const paginatedTestimonials =
+    safeCurrentPage === currentPage
+      ? testimonials
+      : (
+          await getPaginatedTestimonialsWithImageUrls({
+            page: safeCurrentPage,
+            pageSize: itemsPerPage,
+            userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+          })
+        ).items
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Testimoni
+            </h1>
+              <p className="mt-2 text-sm text-slate-500">
+               {totalCount} testimoni tersimpan.
+             </p>
+
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="rounded-xl bg-white px-4 shadow-sm hover:bg-slate-50"
+          >
+            <Link href="/workspace/testimoni/tambah" prefetch={false}>
+              <PlusCircleIcon className="mr-2 size-4" />
+              Tambah Testimoni
+            </Link>
+          </Button>
+        </div>
+
+        <>
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Foto</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Jabatan</TableHead>
+                <TableHead>Testimoni</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Tanggal</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedTestimonials.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="px-6 py-12 text-center">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      Belum ada testimoni
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                      Klik tombol &quot;Tambah Testimoni&quot; untuk membuat testimoni pertama.
+                    </p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTestimonials.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                            N/A
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-slate-600">{item.designation}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="line-clamp-2 text-sm text-slate-600">{item.quote}</p>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} />
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      {new Date(item.createdAt).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="icon-sm" asChild>
+                          <Link href={`/workspace/testimoni/${item.id}/edit`} prefetch={false}>
+                            <PencilIcon className="size-4" />
+                          </Link>
+                        </Button>
+                        <DeleteTestimonialButton
+                          id={item.id}
+                          name={item.name}
+                          action={deleteTestimonialAction}
+                        />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="mt-6">
+          <AdminPagination
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            getHref={(page) => `/workspace/testimoni?page=${page}`}
+          />
+        </div>
+        </>
+      </section>
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "approved") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">
+        <CheckIcon className="h-3 w-3" />
+        Disetujui
+      </span>
+    )
+  }
+
+  if (status === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
+        <XIcon className="h-3 w-3" />
+        Ditolak
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
+      Pending
+    </span>
+  )
+}
