@@ -1,14 +1,14 @@
+import { Suspense } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { CheckIcon, PlusCircleIcon, PencilIcon, XIcon } from "lucide-react"
+import { CheckIcon, PencilIcon, PlusCircleIcon, XIcon } from "lucide-react"
 
 import { deleteGalleryEntryAction } from "@/app/(admin)/admin-space/workspace/galeri/actions"
-import { DeleteGalleryButton } from "@/components/admin/delete-gallery-button"
-import { auth, getSessionUserRole } from "@/lib/auth"
-import { Button } from "@/components/ui/button"
 import { AdminPagination } from "@/components/admin/admin-pagination"
+import { DeleteGalleryButton } from "@/components/admin/delete-gallery-button"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import { getPaginatedGalleryActivities } from "@/lib/gallery"
 import { isSupabaseStorageConfigured } from "@/lib/supabase/config"
 
@@ -25,9 +26,7 @@ export default async function AdminGaleriPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
 
   if (!session) {
     redirect("/login")
@@ -35,15 +34,49 @@ export default async function AdminGaleriPage({
 
   const params = await searchParams
   const currentPage = Number(params.page) || 1
-  const itemsPerPage = 10
-
-  const isConfigured = isSupabaseStorageConfigured()
   const role = getSessionUserRole(session)
+  const userId = role === "admin" || role === "developer" ? undefined : session.user.id
+  const isConfigured = isSupabaseStorageConfigured()
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Galeri</h1>
+            <p className="mt-2 text-sm text-slate-500">Kelola kegiatan dan status galeri.</p>
+          </div>
+          <Button asChild variant="outline" className="bg-white hover:bg-slate-50" disabled={!isConfigured}>
+            <Link href="/workspace/galeri/tambah" prefetch={false}>
+              <PlusCircleIcon className="mr-2 size-4" />
+              Tambah Kegiatan
+            </Link>
+          </Button>
+        </div>
+
+        <Suspense fallback={<AdminGalleryTableSkeleton />}>
+          <AdminGalleryTable currentPage={currentPage} userId={userId} isConfigured={isConfigured} />
+        </Suspense>
+      </section>
+    </div>
+  )
+}
+
+async function AdminGalleryTable({
+  currentPage,
+  userId,
+  isConfigured,
+}: {
+  currentPage: number
+  userId?: string
+  isConfigured: boolean
+}) {
+  const itemsPerPage = 10
   const { items, totalCount } = isConfigured
     ? await getPaginatedGalleryActivities({
         page: currentPage,
         pageSize: itemsPerPage,
-        userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+        userId,
       })
     : { items: [], totalCount: 0 }
   const totalPages = Math.ceil(totalCount / itemsPerPage)
@@ -55,114 +88,86 @@ export default async function AdminGaleriPage({
           await getPaginatedGalleryActivities({
             page: safeCurrentPage,
             pageSize: itemsPerPage,
-            userId: role === "admin" || role === "developer" ? undefined : session.user.id,
+            userId,
           })
         ).items
 
   return (
-    <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
-
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Galeri
-            </h1>
-              <p className="mt-2 text-sm text-slate-500">
-               {totalCount} kegiatan tersimpan.
-             </p>
-
-          </div>
-          <Button asChild variant="outline" className="bg-white hover:bg-slate-50" disabled={!isConfigured}>
-            <Link href="/workspace/galeri/tambah" prefetch={false}>
-              <PlusCircleIcon className="mr-2 size-4" />
-              Tambah Kegiatan
-            </Link>
-          </Button>
-        </div>
-
-        <>
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-          <Table>
-            <TableHeader>
+    <>
+      <p className="mb-4 text-sm text-slate-500">{totalCount} kegiatan tersimpan.</p>
+      <div className="overflow-hidden rounded-xl border border-slate-200">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cover</TableHead>
+              <TableHead>Nama Kegiatan</TableHead>
+              <TableHead>Tanggal</TableHead>
+              <TableHead>Jumlah Foto</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedItems.length === 0 ? (
               <TableRow>
-                <TableHead>Cover</TableHead>
-                <TableHead>Nama Kegiatan</TableHead>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Jumlah Foto</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableCell colSpan={6} className="px-6 py-12 text-center">
+                  <h3 className="text-lg font-semibold text-slate-900">Belum ada kegiatan galeri</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Klik tombol &quot;Tambah Kegiatan&quot; untuk membuat galeri pertama.
+                  </p>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="px-6 py-12 text-center">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      Belum ada kegiatan galeri
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Klik tombol &quot;Tambah Kegiatan&quot; untuk membuat galeri pertama.
-                    </p>
+            ) : (
+              paginatedItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
+                      {item.coverImageUrl ? (
+                        <Image
+                          src={item.coverImageUrl}
+                          alt={item.title}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                          N/A
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{item.title}</TableCell>
+                  <TableCell className="text-slate-600">{item.eventDateLabel}</TableCell>
+                  <TableCell className="text-slate-600">{item.photoCount} foto</TableCell>
+                  <TableCell>
+                    <StatusBadge status={item.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="icon-sm" asChild>
+                        <Link href={`/workspace/galeri/${item.id}/edit`} prefetch={false}>
+                          <PencilIcon className="size-4" />
+                        </Link>
+                      </Button>
+                      <DeleteGalleryButton id={item.id} title={item.title} action={deleteGalleryEntryAction} />
+                    </div>
                   </TableCell>
                 </TableRow>
-              ) : (
-                paginatedItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
-                        {item.coverImageUrl ? (
-                          <Image
-                            src={item.coverImageUrl}
-                            alt={item.title}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                            N/A
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell className="text-slate-600">{item.eventDateLabel}</TableCell>
-                    <TableCell className="text-slate-600">{item.photoCount} foto</TableCell>
-                    <TableCell>
-                      <StatusBadge status={item.status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="icon-sm" asChild>
-                          <Link href={`/workspace/galeri/${item.id}/edit`} prefetch={false}>
-                            <PencilIcon className="size-4" />
-                          </Link>
-                        </Button>
-                        <DeleteGalleryButton
-                          id={item.id}
-                          title={item.title}
-                          action={deleteGalleryEntryAction}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        <div className="mt-6">
-          <AdminPagination
-            currentPage={safeCurrentPage}
-            totalPages={totalPages}
-            getHref={(page) => `/workspace/galeri?page=${page}`}
-          />
-        </div>
-        </>
-      </section>
-    </div>
+      <div className="mt-6">
+        <AdminPagination
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          getHref={(page) => `/workspace/galeri?page=${page}`}
+        />
+      </div>
+    </>
   )
 }
 
@@ -189,5 +194,27 @@ function StatusBadge({ status }: { status: string }) {
     <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
       Pending
     </span>
+  )
+}
+
+function AdminGalleryTableSkeleton() {
+  return (
+    <>
+      <Skeleton className="mb-4 h-4 w-44 rounded-full bg-slate-200" />
+      <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="space-y-3 p-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="grid grid-cols-[5rem_minmax(0,1.8fr)_1fr_1fr_5rem_5rem] gap-3">
+              <Skeleton className="h-12 w-20 rounded-lg bg-slate-200" />
+              <Skeleton className="h-12 rounded-lg bg-slate-200" />
+              <Skeleton className="h-12 rounded-lg bg-slate-200" />
+              <Skeleton className="h-12 rounded-lg bg-slate-200" />
+              <Skeleton className="h-12 rounded-lg bg-slate-200" />
+              <Skeleton className="h-12 rounded-lg bg-slate-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }

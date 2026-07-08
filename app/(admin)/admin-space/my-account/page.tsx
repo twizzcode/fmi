@@ -1,16 +1,13 @@
 import { eq } from "drizzle-orm"
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { UpdateProfileForm } from "@/components/admin/update-profile-form"
-import { auth } from "@/lib/auth"
+import { getRequestSession } from "@/lib/auth"
 import { db, schema } from "@/lib/db"
 import { resolveUserImage } from "@/lib/user-image"
 
 export default async function MyAccountPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
 
   if (!session) {
     redirect("/login")

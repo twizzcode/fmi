@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { headers } from "next/headers"
 import { ArrowLeftIcon } from "lucide-react"
 
-import { auth, getSessionUserRole } from "@/lib/auth"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { getTestimonialById } from "@/lib/testimonials"
 
@@ -13,9 +12,7 @@ type EditTestimoniPageProps = {
 }
 
 export default async function EditTestimoniPage({ params }: EditTestimoniPageProps) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
   const role = session ? getSessionUserRole(session) : null
   const { id } = await params
   const testimonial = await getTestimonialById(

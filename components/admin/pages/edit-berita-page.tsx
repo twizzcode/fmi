@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { headers } from "next/headers"
 import { ArrowLeftIcon } from "lucide-react"
 
-import { auth, getSessionUserRole } from "@/lib/auth"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { getAdminNewsArticleById } from "@/lib/news"
 
@@ -13,9 +12,7 @@ type EditBeritaPageProps = {
 }
 
 export default async function EditBeritaPage({ params }: EditBeritaPageProps) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
   const role = session ? getSessionUserRole(session) : null
   const { id } = await params
   const newsItem = await getAdminNewsArticleById(

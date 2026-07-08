@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { nextCookies } from "better-auth/next-js"
+import { headers } from "next/headers"
+import { cache } from "react"
 
 import {
   appHost,
@@ -83,6 +85,12 @@ export const auth = new Proxy({} as ReturnType<typeof createAuth>, {
   get(_target, property, receiver) {
     return Reflect.get(getAuth(), property, receiver)
   },
+})
+
+export const getRequestSession = cache(async () => {
+  return auth.api.getSession({
+    headers: await headers(),
+  })
 })
 
 export function getSessionUserRole(session: unknown) {

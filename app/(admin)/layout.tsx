@@ -10,17 +10,14 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { eq } from "drizzle-orm"
 
-import { auth, getSessionUserRole } from "@/lib/auth"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import {
   adminOrigin,
   appOrigin,
   canAccessAdmin,
   isAdminHost,
 } from "@/lib/app-config"
-import { db, schema } from "@/lib/db"
-import { resolveUserImage } from "@/lib/user-image"
 
 export const dynamic = "force-dynamic"
 
@@ -30,9 +27,7 @@ export default async function AdminLayout({
   children: React.ReactNode
 }>) {
   const requestHeaders = await headers()
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  })
+  const session = await getRequestSession()
 
   if (!session) {
     redirect(`${appOrigin}/login?redirectTo=${encodeURIComponent(adminOrigin)}`)
@@ -46,11 +41,6 @@ export default async function AdminLayout({
     redirect(adminOrigin)
   }
 
-  const user = await db.query.users.findFirst({
-    where: eq(schema.users.id, session.user.id),
-  })
-  const avatar = user ? await resolveUserImage(user) : session.user.image ?? ""
-
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -58,7 +48,7 @@ export default async function AdminLayout({
           user={{
             name: session.user.name,
             email: session.user.email,
-            avatar: avatar ?? "",
+            avatar: session.user.image ?? "",
             role: getSessionUserRole(session) ?? "user",
           }}
         />

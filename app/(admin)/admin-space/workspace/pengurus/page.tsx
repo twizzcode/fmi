@@ -1,17 +1,14 @@
-import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 import { StructureAdminEditor } from "@/components/admin/structure-admin-editor"
-import { auth, getSessionUserRole } from "@/lib/auth"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import { appOrigin } from "@/lib/app-config"
 import { getStructureCabinets } from "@/lib/structure"
 
 export const dynamic = "force-dynamic"
 
 export default async function StaffPengurusWorkspacePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
   const role = getSessionUserRole(session)
 
   if (!session || (role !== "staff" && role !== "admin" && role !== "developer")) {

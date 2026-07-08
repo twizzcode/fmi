@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { headers } from "next/headers"
 import { ArrowLeftIcon } from "lucide-react"
 
-import { auth, getSessionUserRole } from "@/lib/auth"
+import { getRequestSession, getSessionUserRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { getGalleryActivityById } from "@/lib/gallery"
 
@@ -13,9 +12,7 @@ type EditGaleriPageProps = {
 }
 
 export default async function EditGaleriPage({ params }: EditGaleriPageProps) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await getRequestSession()
   const role = session ? getSessionUserRole(session) : null
   const { id } = await params
   const galleryItem = await getGalleryActivityById(
