@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { NewspaperIcon, ImageUpIcon, PencilIcon, Trash2Icon } from "lucide-react"
 
-import { deleteNewsArticleAction, type NewsActionState, updateNewsArticleAction } from "@/app/(admin)/admin-space/berita/actions"
+import { deleteNewsArticleAction, type NewsActionState, updateNewsArticleAction } from "@/app/(admin)/admin-space/workspace/berita/actions"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
 import {
   AlertDialog,

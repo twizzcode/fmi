@@ -10,7 +10,7 @@ import {
   deleteServiceAction,
   type ServiceActionState,
   updateServiceAction,
-} from "@/app/(admin)/admin-space/layanan/actions"
+} from "@/app/(admin)/admin-space/feature/layanan/actions"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

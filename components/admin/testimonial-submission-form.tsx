@@ -8,7 +8,7 @@ import { ImageIcon } from "lucide-react"
 import {
   submitTestimonialAction,
   type TestimonialSubmissionActionState,
-} from "@/app/(admin)/admin-space/tambah-konten/actions"
+} from "@/app/(admin)/admin-space/workspace/testimoni/submission-actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"

@@ -8,7 +8,7 @@ import { ImageUpIcon, PlusIcon } from "lucide-react"
 import {
   createTestimonialAction,
   type TestimonialActionState,
-} from "@/app/(admin)/admin-space/testimoni/actions"
+} from "@/app/(admin)/admin-space/workspace/testimoni/actions"
 import { Button } from "@/components/ui/button"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import {

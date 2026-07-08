@@ -15,7 +15,7 @@ import {
   type TestimonialActionState,
   deleteTestimonialAction,
   updateTestimonialAction,
-} from "@/app/(admin)/admin-space/testimoni/actions"
+} from "@/app/(admin)/admin-space/workspace/testimoni/actions"
 import { Button } from "@/components/ui/button"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import {

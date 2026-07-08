@@ -82,7 +82,7 @@ const data = {
   navFeature: [
     {
       title: "Layanan",
-      url: "/layanan",
+      url: "/feature/layanan",
       icon: (
         <BriefcaseBusinessIcon
         />
@@ -90,7 +90,7 @@ const data = {
     },
     {
       title: "Pengurus",
-      url: "/pengurus",
+      url: "/feature/pengurus",
       icon: (
         <UsersIcon
         />
@@ -98,7 +98,7 @@ const data = {
     },
     {
       title: "Anggota",
-      url: "/anggota",
+      url: "/feature/anggota",
       icon: (
         <UsersIcon
         />
@@ -118,7 +118,7 @@ const data = {
   projects: [
     {
       name: "Berita",
-      url: "/berita",
+      url: "/workspace/berita",
       icon: (
         <NewspaperIcon
         />
@@ -126,7 +126,7 @@ const data = {
     },
     {
       name: "Galeri",
-      url: "/galeri",
+      url: "/workspace/galeri",
       icon: (
         <ImageIcon
         />
@@ -134,9 +134,17 @@ const data = {
     },
     {
       name: "Testimoni",
-      url: "/testimoni",
+      url: "/workspace/testimoni",
       icon: (
         <MessageSquareQuoteIcon
+        />
+      ),
+    },
+    {
+      name: "Pengurus",
+      url: "/workspace/pengurus",
+      icon: (
+        <UsersIcon
         />
       ),
     },
@@ -150,6 +158,9 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
     user.role === "alumni" ||
     user.role === "admin" ||
     user.role === "developer"
+  const workplaceProjects = data.projects.filter(
+    (item) => item.name !== "Pengurus" || user.role !== "alumni"
+  )
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -159,7 +170,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       <SidebarContent>
         {canSeeAdminSections ? <NavMain items={data.navMain} /> : null}
         {canSeeAdminSections ? <NavMain items={data.navFeature} label="Feature" /> : null}
-        {canSeeWorkplaceSections ? <NavProjects projects={data.projects} /> : null}
+        {canSeeWorkplaceSections ? <NavProjects projects={workplaceProjects} /> : null}
         <NavMain items={data.navAccount} label="Account" />
       </SidebarContent>
       <SidebarFooter>

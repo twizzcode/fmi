@@ -124,6 +124,86 @@ export function GalleryPageSkeleton() {
   )
 }
 
+export function AdminPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-6">
+        <Skeleton className="h-8 w-8 rounded-md bg-slate-200" />
+        <Skeleton className="h-4 w-px bg-slate-200" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-20 rounded-full bg-slate-200" />
+          <Skeleton className="h-4 w-4 rounded-full bg-slate-200" />
+          <Skeleton className="h-4 w-24 rounded-full bg-slate-200" />
+        </div>
+      </div>
+
+      <div className="space-y-6 p-4 md:p-6">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Skeleton className="h-3 w-24 rounded-full bg-slate-200" />
+          <Skeleton className="mt-3 h-8 w-56 rounded-xl bg-slate-200" />
+          <Skeleton className="mt-3 h-4 w-full max-w-2xl rounded-full bg-slate-200" />
+          <Skeleton className="mt-2 h-4 w-full max-w-xl rounded-full bg-slate-200" />
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-3">
+                  <Skeleton className="h-3 w-24 rounded-full bg-slate-200" />
+                  <Skeleton className="h-7 w-20 rounded-xl bg-slate-200" />
+                </div>
+                <Skeleton className="h-11 w-11 rounded-full bg-slate-200" />
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <Skeleton className="h-6 w-48 rounded-xl bg-slate-200" />
+            <Skeleton className="mt-3 h-4 w-full max-w-lg rounded-full bg-slate-200" />
+            <Skeleton className="mt-6 h-72 w-full rounded-2xl bg-slate-200" />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-11 w-11 rounded-full bg-slate-200" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-36 rounded-full bg-slate-200" />
+                <Skeleton className="h-4 w-52 rounded-full bg-slate-200" />
+              </div>
+            </div>
+            <div className="mt-6 space-y-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="rounded-2xl border border-slate-200 p-4">
+                  <Skeleton className="h-3 w-28 rounded-full bg-slate-200" />
+                  <Skeleton className="mt-3 h-7 w-24 rounded-xl bg-slate-200" />
+                  <Skeleton className="mt-3 h-4 w-40 rounded-full bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Skeleton className="h-6 w-40 rounded-xl bg-slate-200" />
+          <Skeleton className="mt-3 h-4 w-full max-w-lg rounded-full bg-slate-200" />
+          <div className="mt-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="grid grid-cols-[minmax(0,1fr)_6rem_7rem_5rem] gap-3 rounded-xl border border-slate-200 p-4">
+                <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
+                <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
+                <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
+                <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
 export function StructurePageSkeleton() {
   return (
     <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef4fb_100%)]">

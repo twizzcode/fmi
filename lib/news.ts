@@ -12,6 +12,7 @@ export type NewsArticle = {
   excerpt: string
   category: string
   author: string
+  authorRole: string | null
   authorImageUrl: string | null
   imagePath: string
   imageUrl: string
@@ -27,6 +28,8 @@ export async function getNewsArticles() {
   const items = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -42,6 +45,8 @@ export async function getLatestNewsArticles(limit = 3) {
   const items = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -58,6 +63,8 @@ export async function getNewsArticleBySlug(slug: string) {
   const [item] = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -82,6 +89,8 @@ export async function getRelatedNewsArticles(slug: string, limit = 3) {
   const items = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -112,6 +121,8 @@ export async function getAdminNewsArticles(userId?: string) {
   const items = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -178,6 +189,8 @@ export async function getAdminNewsArticleById(id: string, userId?: string) {
   const [item] = await db
     .select({
       article: schema.newsArticles,
+      authorName: schema.users.name,
+      authorRole: schema.users.role,
       authorImage: schema.users.image,
       authorUploadedImagePath: schema.users.uploadedImagePath,
     })
@@ -231,10 +244,14 @@ export function createBodyJsonFromParagraphs(paragraphs: string[]) {
 
 async function mapDbNewsArticle({
   article,
+  authorName,
+  authorRole,
   authorImage,
   authorUploadedImagePath,
 }: {
   article: typeof schema.newsArticles.$inferSelect
+  authorName: string | null
+  authorRole: typeof schema.users.$inferSelect.role | null
   authorImage: string | null
   authorUploadedImagePath: string | null
 }): Promise<NewsArticle> {
@@ -257,7 +274,8 @@ async function mapDbNewsArticle({
     title: article.title,
     excerpt: article.excerpt,
     category: article.category,
-    author: article.author,
+    author: authorName?.trim() || article.author,
+    authorRole: getAuthorRoleLabel(authorRole),
     authorImageUrl,
     imagePath: article.imagePath,
     imageUrl,
@@ -276,4 +294,21 @@ function formatDate(date: Date) {
     month: "short",
     year: "numeric",
   }).format(date)
+}
+
+function getAuthorRoleLabel(role: typeof schema.users.$inferSelect.role | null) {
+  switch (role) {
+    case "staff":
+      return "Staff"
+    case "admin":
+      return "Admin"
+    case "developer":
+      return "Developer"
+    case "alumni":
+      return "Alumni"
+    case "user":
+      return "User"
+    default:
+      return null
+  }
 }

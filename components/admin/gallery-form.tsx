@@ -7,7 +7,7 @@ import { ImagesIcon, PlusIcon } from "lucide-react"
 import {
   createGalleryEntryAction,
   type GalleryActionState,
-} from "@/app/(admin)/admin-space/galeri/actions"
+} from "@/app/(admin)/admin-space/workspace/galeri/actions"
 import { GalleryDateField } from "@/components/admin/gallery-date-field"
 import { Button } from "@/components/ui/button"
 import {

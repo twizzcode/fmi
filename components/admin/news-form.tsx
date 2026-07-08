@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react"
 import { useFormStatus } from "react-dom"
 
-import { createNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/berita/actions"
+import { createNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/workspace/berita/actions"
 import { RichTextEditor } from "@/components/editor/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

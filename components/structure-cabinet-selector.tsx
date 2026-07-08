@@ -36,7 +36,7 @@ export function StructureCabinetSelector({
   }
 
   return (
-    <div className="max-w-md">
+    <div className="w-full max-w-xs">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

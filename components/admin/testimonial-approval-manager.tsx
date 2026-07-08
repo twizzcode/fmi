@@ -9,7 +9,7 @@ import {
   approveTestimonialAction,
   rejectTestimonialAction,
   type TestimonialApprovalActionState,
-} from "@/app/(admin)/admin-space/testimoni/approval-actions"
+} from "@/app/(admin)/admin-space/workspace/testimoni/approval-actions"
 import { Button } from "@/components/ui/button"
 import {
   Table,

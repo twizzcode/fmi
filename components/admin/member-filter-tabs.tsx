@@ -23,7 +23,7 @@ export function MemberFilterTabs({ currentTab }: { currentTab: string }) {
     params.delete("page")
 
     const query = params.toString()
-    router.push(query ? `/anggota?${query}` : "/anggota")
+    router.push(query ? `/feature/anggota?${query}` : "/feature/anggota")
   }
 
   return (

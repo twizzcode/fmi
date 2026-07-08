@@ -8,6 +8,7 @@ import { cache } from "react"
 import { NewsBodyViewer } from "@/components/news/news-body-viewer"
 import { NewsViewTracker } from "@/components/news/news-view-tracker"
 import { BlurFade } from "@/components/ui/blur-fade"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { createAppUrl } from "@/lib/app-config"
 import {
   getNewsArticleBySlug,
@@ -18,6 +19,15 @@ import {
 export const revalidate = 300
 
 const getCachedNewsArticleBySlug = cache(getNewsArticleBySlug)
+
+function getAuthorInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
 
 export async function generateStaticParams() {
   const slugs = await getNewsArticleSlugs()
@@ -127,9 +137,12 @@ export default async function NewsDetailPage(
             </BlurFade>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-900">
-                FMI
-              </div>
+              <Avatar className="h-11 w-11 border border-slate-200 bg-white">
+                <AvatarImage src={article.authorImageUrl ?? undefined} alt={article.author} />
+                <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
+                  {getAuthorInitials(article.author)}
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <p className="text-sm font-medium text-slate-900">{article.author}</p>
                 <p className="text-sm text-slate-500">
@@ -143,6 +156,10 @@ export default async function NewsDetailPage(
             <BlurFade inView delay={0.06}>
               <NewsBodyViewer value={article.bodyJson} />
             </BlurFade>
+
+            <p className="text-sm font-medium text-slate-600 italic">
+              Ditulis oleh <span className="font-bold">{article.author}</span>
+            </p>
           </div>
 
           <aside className="h-fit xl:sticky xl:top-24">
@@ -184,9 +201,12 @@ export default async function NewsDetailPage(
                           {item.excerpt}
                         </p>
                         <div className="mt-4 flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-[11px] font-semibold text-slate-900">
-                            FMI
-                          </div>
+                          <Avatar className="h-9 w-9 border border-slate-200 bg-white">
+                            <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
+                            <AvatarFallback className="bg-white text-[11px] font-semibold text-slate-900">
+                              {getAuthorInitials(item.author)}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
                             <p className="text-xs font-medium text-slate-900">
                               {item.author}

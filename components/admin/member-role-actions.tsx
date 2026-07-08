@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 import { CheckIcon, MoreHorizontalIcon } from "lucide-react"
 
-import { updateMemberRoleAction } from "@/app/(admin)/admin-space/anggota/actions"
+import { updateMemberRoleAction } from "@/app/(admin)/admin-space/feature/anggota/actions"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

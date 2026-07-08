@@ -42,9 +42,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import {
+  saveStaffStructureCardsAction,
   saveStructureAction,
   type StructureActionState,
-} from "@/app/(admin)/admin-space/pengurus/actions"
+} from "@/app/(admin)/admin-space/feature/pengurus/actions"
 import { departmentProfiles } from "@/lib/site-data"
 
 type Gender = "ikhwan" | "akhwat"
@@ -88,14 +89,22 @@ type CabinetEditorState = {
 }
 
 const departmentNames = departmentProfiles.map((department) => department.name)
-const positionOptions = [
+const generalPositionOptions = [
   "Kepala Departemen",
   "Sekretaris Departemen",
   "Staf Ahli",
 ] as const
+const executivePositionOptions = [
+  "Mas'ul",
+  "Wamas'ul",
+  "Koordinator Akhwat",
+  "Sekretaris",
+  "Bendahara",
+] as const
 const studyProgramOptions = [
   "S1 Matematika",
   "S1 Pendidikan Matematika",
+  "D4 Statistika dan Sains Data",
   "D3 Statistika Terapan dan Komputasi",
   "S1 Fisika",
   "S1 Pendidikan Fisika",
@@ -164,8 +173,10 @@ const initialActionState: StructureActionState = {
 
 export function StructureAdminEditor({
   initialCabinets = [],
+  mode = "admin",
 }: {
   initialCabinets?: CabinetEditorState[]
+  mode?: "admin" | "staff"
 }) {
   const [selectedCabinetId, setSelectedCabinetId] = useState(
     initialCabinets.find((cabinet) => cabinet.isDefault)?.id ??
@@ -199,6 +210,7 @@ export function StructureAdminEditor({
 
   const selectedCabinet =
     cabinets.find((cabinet) => cabinet.id === selectedCabinetId) ?? cabinets[0] ?? null
+  const isStaffMode = mode === "staff"
 
   if (!selectedCabinet) {
     return (
@@ -481,7 +493,9 @@ export function StructureAdminEditor({
       }
     }
 
-    const result = await saveStructureAction(initialActionState, formData)
+    const result = await (isStaffMode
+      ? saveStaffStructureCardsAction(initialActionState, formData)
+      : saveStructureAction(initialActionState, formData))
 
     if (result.payload) {
       const nextCabinets = deserializeCabinets(result.payload)
@@ -516,11 +530,12 @@ export function StructureAdminEditor({
         <div className="mt-3 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-3xl">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Kelola Pengurus
+              {isStaffMode ? "Edit Kartu Pengurus" : "Kelola Pengurus"}
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Pilih kabinet, atur identitas kabinet, lalu isi fungsionaris untuk
-              delapan departemen langsung dari panel ini.
+              {isStaffMode
+                ? "Staf hanya bisa mengubah isi kartu fungsionaris pada kabinet default yang tampil di halaman struktur."
+                : "Pilih kabinet, atur identitas kabinet, lalu isi fungsionaris untuk delapan departemen langsung dari panel ini."}
             </p>
             {selectedCabinet.isDefault ? (
               <p className="mt-3 inline-flex rounded-full bg-[#dce8f6] px-3 py-1 text-xs font-semibold text-[#27466f]">
@@ -529,83 +544,96 @@ export function StructureAdminEditor({
             ) : null}
           </div>
           <div className="w-full md:max-w-sm">
-            <label className="mb-2 block text-sm font-medium text-slate-900">
-              Pilih kabinet
-            </label>
-            <div className="flex gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+            {isStaffMode ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">Kabinet aktif</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selectedCabinet.orderLabel} · {selectedCabinet.name || "Kabinet tanpa nama"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <label className="mb-2 block text-sm font-medium text-slate-900">
+                  Pilih kabinet
+                </label>
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 flex-1 justify-between px-3 font-normal text-slate-900"
+                      >
+                        <span className={selectedCabinet.name ? "" : "text-slate-400"}>
+                          {selectedCabinet.orderLabel} ·{" "}
+                          {selectedCabinet.name || "Kabinet tanpa nama"}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuRadioGroup
+                        value={selectedCabinetId}
+                        onValueChange={setSelectedCabinetId}
+                      >
+                        {cabinets.map((cabinet) => (
+                          <DropdownMenuRadioItem key={cabinet.id} value={cabinet.id}>
+                            {cabinet.orderLabel} ·{" "}
+                            {cabinet.name || "Kabinet tanpa nama"}
+                            {cabinet.isDefault ? " · Default" : ""}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="h-11 flex-1 justify-between px-3 font-normal text-slate-900"
+                    className="h-11 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
+                    onClick={addCabinet}
                   >
-                    <span className={selectedCabinet.name ? "" : "text-slate-400"}>
-                      {selectedCabinet.orderLabel} ·{" "}
-                      {selectedCabinet.name || "Kabinet tanpa nama"}
-                    </span>
+                    <PlusIcon className="size-4" />
+                    Tambah
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuRadioGroup
-                    value={selectedCabinetId}
-                    onValueChange={setSelectedCabinetId}
-                  >
-                    {cabinets.map((cabinet) => (
-                      <DropdownMenuRadioItem key={cabinet.id} value={cabinet.id}>
-                        {cabinet.orderLabel} ·{" "}
-                        {cabinet.name || "Kabinet tanpa nama"}
-                        {cabinet.isDefault ? " · Default" : ""}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                type="button"
-                className="h-11 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
-                onClick={addCabinet}
-              >
-                <PlusIcon className="size-4" />
-                Tambah
-              </Button>
-            </div>
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-col gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Pengaturan kabinet
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Jadikan kabinet ini sebagai default, atau hapus jika sudah
-                    tidak dipakai lagi.
-                  </p>
                 </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                  <Button
-                    type="button"
-                    variant={selectedCabinet.isDefault ? "outline" : "default"}
-                    className={
-                      selectedCabinet.isDefault
-                        ? "border-[#3f679c] text-[#3f679c]"
-                        : "bg-[#3f679c] text-white hover:bg-[#355887]"
-                    }
-                    onClick={() => markCabinetAsDefault(selectedCabinet.id)}
-                    disabled={selectedCabinet.isDefault}
-                  >
-                    {selectedCabinet.isDefault ? "Sudah default" : "Jadikan Default"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => setDeleteAlertOpen(true)}
-                  >
-                    <Trash2Icon className="size-4" />
-                    Hapus Kabinet
-                  </Button>
+              </>
+            )}
+            {isStaffMode ? null : (
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Pengaturan kabinet
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Jadikan kabinet ini sebagai default, atau hapus jika sudah
+                      tidak dipakai lagi.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <Button
+                      type="button"
+                      variant={selectedCabinet.isDefault ? "outline" : "default"}
+                      className={
+                        selectedCabinet.isDefault
+                          ? "border-[#3f679c] text-[#3f679c]"
+                          : "bg-[#3f679c] text-white hover:bg-[#355887]"
+                      }
+                      onClick={() => markCabinetAsDefault(selectedCabinet.id)}
+                      disabled={selectedCabinet.isDefault}
+                    >
+                      {selectedCabinet.isDefault ? "Sudah default" : "Jadikan Default"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => setDeleteAlertOpen(true)}
+                    >
+                      <Trash2Icon className="size-4" />
+                      Hapus Kabinet
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -640,14 +668,16 @@ export function StructureAdminEditor({
               modal agar tetap ringkas seperti pengelolaan fungsionaris.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setCabinetEditorOpen(true)}
-          >
-            <PencilIcon className="size-4" />
-            Edit Kabinet
-          </Button>
+          {isStaffMode ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCabinetEditorOpen(true)}
+            >
+              <PencilIcon className="size-4" />
+              Edit Kabinet
+            </Button>
+          )}
         </div>
 
         <div className="mt-6 grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -715,14 +745,16 @@ export function StructureAdminEditor({
                   {section.members.length} fungsionaris di departemen ini.
                 </p>
               </div>
-              <Button
-                type="button"
-                className="h-10 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
-                onClick={() => addMember(section.department)}
-              >
-                <PlusIcon className="size-4" />
-                Tambah Fungsionaris
-              </Button>
+              {isStaffMode ? null : (
+                <Button
+                  type="button"
+                  className="h-10 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
+                  onClick={() => addMember(section.department)}
+                >
+                  <PlusIcon className="size-4" />
+                  Tambah Fungsionaris
+                </Button>
+              )}
             </div>
 
             {section.members.length === 0 ? (
@@ -816,15 +848,17 @@ export function StructureAdminEditor({
                                 <PencilIcon className="size-4" />
                                 Edit
                               </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon-sm"
-                                aria-label={`Hapus ${member.name || "fungsionaris"}`}
-                                onClick={() => openMemberDeleteConfirmation(section.department, member)}
-                              >
-                                <Trash2Icon className="size-4" />
-                              </Button>
+                              {isStaffMode ? null : (
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon-sm"
+                                  aria-label={`Hapus ${member.name || "fungsionaris"}`}
+                                  onClick={() => openMemberDeleteConfirmation(section.department, member)}
+                                >
+                                  <Trash2Icon className="size-4" />
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -956,7 +990,11 @@ export function StructureAdminEditor({
                       <DropdownField
                         value={activeMember.position}
                         placeholder="Pilih jabatan"
-                        options={positionOptions}
+                        options={
+                          activeEditor.department === "Pengurus Harian"
+                            ? executivePositionOptions
+                            : generalPositionOptions
+                        }
                         onSelect={(value) =>
                           updateMember(
                             activeEditor.department,
@@ -967,6 +1005,7 @@ export function StructureAdminEditor({
                         }
                       />
                     </Field>
+
                     <Field label="Program studi">
                       <DropdownField
                         value={activeMember.program}
