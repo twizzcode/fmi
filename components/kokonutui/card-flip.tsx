@@ -126,8 +126,9 @@ export default function CardFlip({
               src={imageSrc}
               alt={imageAlt}
               fill
-              sizes="320px"
+              sizes="(min-width: 1280px) 288px, (min-width: 1024px) calc((100vw - 120px) / 4), (min-width: 640px) calc((100vw - 72px) / 2), calc(100vw - 48px)"
               className="object-cover"
+              unoptimized={imageSrc.startsWith("http")}
               style={{
                 objectPosition: imagePosition,
                 transform: `scale(${imageScale})`,

@@ -61,7 +61,9 @@ export function StructurePageContent({
                 alt={currentCabinet.name}
                 width={260}
                 height={260}
+                sizes="240px"
                 className="h-auto w-full max-w-[240px] object-contain"
+                unoptimized={(currentCabinet.logoUrl || currentCabinet.logoPath).startsWith("http")}
               />
             ) : (
               <div className="text-center text-sm text-slate-400">
