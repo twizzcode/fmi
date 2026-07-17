@@ -319,13 +319,14 @@ async function persistStructure(
 
       const members = nextCabinets.flatMap((cabinet) =>
         cabinet.sections.flatMap((section) =>
-          section.members.map((member) => ({
+          section.members.map((member, sortOrder) => ({
             id: member.id,
             cabinetId: cabinet.id,
             department: section.department,
             name: member.name,
             nickname: member.nickname,
             position: member.position,
+            sortOrder,
             program: member.program,
             entryYear: member.entryYear,
             gender: member.gender,

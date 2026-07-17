@@ -1,0 +1,2 @@
+ALTER TABLE "structure_member" ADD COLUMN "sort_order" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE INDEX "structure_member_sort_order_idx" ON "structure_member" USING btree ("sort_order");

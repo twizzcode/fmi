@@ -123,7 +123,7 @@ export function StructurePageContent({
                   Belum ada fungsionaris di departemen ini.
                 </div>
               ) : (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                   {section.members.map((member) => (
                     <div key={member.id} className="w-full">
                       <CardFlip

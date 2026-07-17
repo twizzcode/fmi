@@ -148,6 +148,13 @@
       "when": 1782818350784,
       "tag": "0020_bizarre_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784262781783,
+      "tag": "0021_chief_zarek",
+      "breakpoints": true
     }
   ]
 }

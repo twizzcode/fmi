@@ -61,7 +61,7 @@ export async function getStructureCabinets() {
   const members = await db
     .select()
     .from(schema.structureMembers)
-    .orderBy(asc(schema.structureMembers.createdAt))
+    .orderBy(asc(schema.structureMembers.sortOrder), asc(schema.structureMembers.createdAt))
 
   return Promise.all(
     cabinets.map(async (cabinet) => {

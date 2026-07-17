@@ -4,6 +4,8 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 import Image from "next/image"
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   ImageUpIcon,
   PencilIcon,
   PlusIcon,
@@ -104,7 +106,7 @@ const executivePositionOptions = [
 const studyProgramOptions = [
   "S1 Matematika",
   "S1 Pendidikan Matematika",
-  "D4 Statistika dan Sains Data",
+  "S1 Statistika dan Sains Data",
   "D3 Statistika Terapan dan Komputasi",
   "S1 Fisika",
   "S1 Pendidikan Fisika",
@@ -330,6 +332,38 @@ export function StructureAdminEditor({
       ),
     }))
     setActiveEditor({ department, memberId: newMember.id })
+  }
+
+  function getCabinetsAfterMovingMember(department: string, memberId: string, direction: -1 | 1) {
+    return cabinets.map((cabinet) => {
+      if (cabinet.id !== selectedCabinet.id) return cabinet
+
+      return {
+        ...cabinet,
+        sections: cabinet.sections.map((section) => {
+          if (section.department !== department) return section
+
+          const memberIndex = section.members.findIndex((member) => member.id === memberId)
+          const nextIndex = memberIndex + direction
+
+          if (memberIndex < 0 || nextIndex < 0 || nextIndex >= section.members.length) {
+            return section
+          }
+
+          const members = [...section.members]
+          const [member] = members.splice(memberIndex, 1)
+          members.splice(nextIndex, 0, member)
+
+          return { ...section, members }
+        }),
+      }
+    })
+  }
+
+  function moveMember(department: string, memberId: string, direction: -1 | 1) {
+    const nextCabinets = getCabinetsAfterMovingMember(department, memberId, direction)
+    setCabinets(nextCabinets)
+    void submitStructure("member", nextCabinets)
   }
 
   function getCabinetsAfterRemovingMember(department: string, memberId: string) {
@@ -796,7 +830,7 @@ export function StructureAdminEditor({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {section.members.map((member) => (
+                      {section.members.map((member, memberIndex) => (
                         <tr key={member.id} className="align-top">
                           <td className="px-4 py-3">
                             <div className="relative h-16 w-12 overflow-hidden rounded-lg bg-slate-100">
@@ -834,6 +868,30 @@ export function StructureAdminEditor({
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-2">
+                              {isStaffMode ? null : (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    aria-label={`Naikkan ${member.name || "fungsionaris"}`}
+                                    disabled={isSavingMember || memberIndex === 0}
+                                    onClick={() => moveMember(section.department, member.id, -1)}
+                                  >
+                                    <ArrowUpIcon className="size-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    aria-label={`Turunkan ${member.name || "fungsionaris"}`}
+                                    disabled={isSavingMember || memberIndex === section.members.length - 1}
+                                    onClick={() => moveMember(section.department, member.id, 1)}
+                                  >
+                                    <ArrowDownIcon className="size-4" />
+                                  </Button>
+                                </>
+                              )}
                               <Button
                                 type="button"
                                 variant="outline"

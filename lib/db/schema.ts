@@ -232,6 +232,7 @@ export const structureMembers = pgTable(
     name: text("name").notNull(),
     nickname: text("nickname").notNull().default(""),
     position: text("position").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
     program: text("program").notNull(),
     entryYear: text("entry_year").notNull(),
     gender: text("gender", { enum: structureGenderValues })
@@ -254,6 +255,7 @@ export const structureMembers = pgTable(
   (table) => [
     index("structure_member_cabinet_id_idx").on(table.cabinetId),
     index("structure_member_department_idx").on(table.department),
+    index("structure_member_sort_order_idx").on(table.sortOrder),
     index("structure_member_created_at_idx").on(table.createdAt),
   ]
 )
