@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { appUrl, createAppUrl } from "@/lib/app-config";
@@ -67,6 +68,11 @@ export default function RootLayout({
     <html lang="id" className={cn("h-full scroll-smooth", "font-sans", geist.variable)}>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         {children}
+        <Script
+          src="https://umami-twizz.netlify.app/script.js"
+          strategy="beforeInteractive"
+          data-website-id="2f54bb86-73f1-4efb-b2a9-230de73c19d3"
+        />
       </body>
     </html>
   );

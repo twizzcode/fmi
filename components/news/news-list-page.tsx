@@ -140,7 +140,7 @@ export function NewsListPage({ items }: { items: NewsArticle[] }) {
           </div>
         </BlurFade>
 
-        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 md:gap-8 xl:grid-cols-3">
           {visibleNews.length === 0 ? (
             <p className="text-sm text-slate-500">Kosong</p>
           ) : (
@@ -148,26 +148,27 @@ export function NewsListPage({ items }: { items: NewsArticle[] }) {
               <BlurFade key={`${item.slug}-${page}`} inView delay={0.05 + index * 0.06} className="h-full">
                 <Link href={`/berita/${item.slug}`} className="group block h-full">
                   <article className="flex h-full flex-col">
-                    <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
+                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-100 md:rounded-[1.5rem]">
                       <Image
                         src={item.imageUrl}
                         alt={item.title}
                         fill
+                        sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 50vw"
                         className="object-cover transition duration-300 group-hover:scale-105"
                       />
                     </div>
-                    <div className="flex flex-1 flex-col pt-6">
-                      <span className="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    <div className="flex flex-1 flex-col pt-3 md:pt-6">
+                      <span className="inline-flex w-fit rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600 md:px-3 md:text-xs">
                         {item.category}
                       </span>
-                      <h2 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c]">
+                      <h2 className="mt-3 line-clamp-2 text-sm font-semibold leading-tight tracking-tight text-slate-900 transition group-hover:text-[#3f679c] md:mt-4 md:text-2xl">
                         {item.title}
                       </h2>
-                      <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
+                      <p className="mt-2 line-clamp-2 flex-1 text-xs leading-5 text-slate-500 md:mt-3 md:text-sm md:leading-7">
                         {item.excerpt}
                       </p>
-                      <div className="mt-6 flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-slate-200 bg-white">
+                      <div className="mt-4 flex items-center gap-2 md:mt-6 md:gap-3">
+                        <Avatar className="h-7 w-7 border border-slate-200 bg-white md:h-10 md:w-10">
                           <AvatarImage src={item.authorImageUrl ?? undefined} alt={item.author} />
                           <AvatarFallback className="bg-white text-xs font-semibold text-slate-900">
                             {getAuthorInitials(item.author)}
