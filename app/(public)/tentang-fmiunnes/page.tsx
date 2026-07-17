@@ -229,10 +229,10 @@ export default function AboutPage() {
 
           <div className="grid gap-4 md:grid-cols-[1.08fr_0.92fr]">
             <div className="relative min-h-[340px] overflow-hidden rounded-[1.75rem] md:min-h-[440px]">
-              <Image
-                src="/images/foto bersama.jpg"
-                alt="Kegiatan mentoring FMI"
-                fill
+                <Image
+                  src="/images/fmi/1.webp"
+                  alt="Kegiatan mentoring FMI"
+                  fill
                 sizes="(min-width: 1024px) 40vw, 100vw"
                 className="object-cover object-[36%_center]"
               />
@@ -241,7 +241,7 @@ export default function AboutPage() {
             <div className="grid gap-4">
               <div className="relative min-h-[160px] overflow-hidden rounded-[1.75rem] md:min-h-[212px]">
                 <Image
-                  src="/images/foto bersama.jpg"
+                  src="/images/fmi/4.webp"
                   alt="Suasana mentoring FMI"
                   fill
                   sizes="(min-width: 768px) 20vw, 100vw"
@@ -250,7 +250,7 @@ export default function AboutPage() {
               </div>
               <div className="relative min-h-[160px] overflow-hidden rounded-[1.75rem] md:min-h-[212px]">
                 <Image
-                  src="/images/foto bersama.jpg"
+                  src="/images/fmi/2.webp"
                   alt="Kebersamaan peserta mentoring FMI"
                   fill
                   sizes="(min-width: 768px) 20vw, 100vw"
@@ -268,7 +268,7 @@ export default function AboutPage() {
             <div className="grid gap-4">
               <div className="relative min-h-[160px] overflow-hidden rounded-[1.75rem] md:min-h-[212px]">
                 <Image
-                  src="/images/foto bersama.jpg"
+                  src="/images/fmi/3.webp"
                   alt="Aktivitas pengembangan soft skills FMI"
                   fill
                   sizes="(min-width: 768px) 20vw, 100vw"
@@ -277,7 +277,7 @@ export default function AboutPage() {
               </div>
               <div className="relative min-h-[160px] overflow-hidden rounded-[1.75rem] md:min-h-[212px]">
                 <Image
-                  src="/images/foto bersama.jpg"
+                  src="/images/fmi/5.webp"
                   alt="Kerja sama tim di FMI"
                   fill
                   sizes="(min-width: 768px) 20vw, 100vw"
@@ -287,8 +287,8 @@ export default function AboutPage() {
             </div>
 
             <div className="relative min-h-[340px] overflow-hidden rounded-[1.75rem] md:min-h-[440px]">
-              <Image
-                src="/images/foto bersama.jpg"
+                <Image
+                src="/images/fmi/6.webp"
                 alt="Pengembangan soft skills mahasiswa di FMI"
                 fill
                 sizes="(min-width: 1024px) 40vw, 100vw"
