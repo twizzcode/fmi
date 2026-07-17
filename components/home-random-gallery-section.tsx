@@ -23,7 +23,7 @@ export async function HomeRandomGallerySection() {
           columns={{
             desktop: 3,
             tablet: 2,
-            mobile: 1,
+            mobile: 2,
           }}
           className="w-full"
         />

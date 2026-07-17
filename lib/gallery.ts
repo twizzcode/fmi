@@ -33,12 +33,25 @@ export type GalleryActivity = {
   status: string
 }
 
+function shuffle<T>(items: T[]) {
+  const result = [...items]
+
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(Math.random() * (index + 1))
+    const current = result[index]
+    result[index] = result[nextIndex]
+    result[nextIndex] = current
+  }
+
+  return result
+}
+
 export async function getGalleryVisuals(limit = 24): Promise<GalleryVisual[]> {
   const activities = (await getGalleryActivities().catch(() => [])).filter(
     (activity) => activity.status === "approved"
   )
-  const visuals = activities
-    .flatMap((activity) =>
+  const visuals = shuffle(
+    activities.flatMap((activity) =>
       activity.photos
         .filter((photo) => photo.url)
         .map((photo) => ({
@@ -48,7 +61,7 @@ export async function getGalleryVisuals(limit = 24): Promise<GalleryVisual[]> {
           title: activity.title,
         }))
     )
-    .slice(0, limit)
+  ).slice(0, limit)
 
   return visuals
 }
