@@ -69,7 +69,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         {children}
         <Script
-          src="https://umami-twizz.netlify.app/script.js"
+          src="https://umami.twizzcode.my.id/script.js"
           strategy="beforeInteractive"
           data-website-id="2f54bb86-73f1-4efb-b2a9-230de73c19d3"
         />
