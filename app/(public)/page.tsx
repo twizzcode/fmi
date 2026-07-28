@@ -66,7 +66,7 @@ export default async function Home() {
               <p className="mx-auto mt-6 max-w-4xl text-lg leading-8 text-white/82 md:text-xl">
                 Wadah ukhuwah, pembinaan, dan kontribusi mahasiswa muslim FMIPA
                 UNNES dalam menebar kebermanfaatan, menguatkan keilmuan, serta
-                membangun peradaban kampus yang madani.
+                membangun peradaban kampus yang madani. 
               </p>
             </BlurFade>
             <BlurFade delay={0.28} duration={0.7}>
