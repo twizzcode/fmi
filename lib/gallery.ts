@@ -33,6 +33,17 @@ export type GalleryActivity = {
   status: string
 }
 
+export type GalleryActivityMinimal = {
+  id: string
+  title: string
+  eventDate: Date
+  eventDateLabel: string
+  eventDateValue: string
+  coverImageUrl: string | null
+  photoCount: number
+  status: string
+}
+
 function shuffle<T>(items: T[]) {
   const result = [...items]
 
@@ -81,12 +92,14 @@ export async function getPaginatedGalleryActivities({
   pageSize,
   userId,
   status,
+  minimal = false,
 }: {
   page: number
   pageSize: number
   userId?: string
   status?: GalleryStatus | "all"
-}) {
+  minimal?: boolean
+}): Promise<{ totalCount: number; items: GalleryActivity[] | GalleryActivityMinimal[] }> {
   const currentPage = Math.max(1, page)
   const offset = (currentPage - 1) * pageSize
   const whereClause =
@@ -111,6 +124,13 @@ export async function getPaginatedGalleryActivities({
       .limit(pageSize)
       .offset(offset),
   ])
+
+  if (minimal) {
+    return {
+      totalCount: countResult[0]?.count ?? 0,
+      items: await mapGalleryActivitiesMinimal(entries),
+    }
+  }
 
   return {
     totalCount: countResult[0]?.count ?? 0,
@@ -302,6 +322,57 @@ async function mapGalleryActivities(
       })),
     }
   })
+}
+
+async function mapGalleryActivitiesMinimal(
+  entries: Array<typeof schema.galleryEntries.$inferSelect>
+): Promise<GalleryActivityMinimal[]> {
+  if (entries.length === 0) {
+    return []
+  }
+
+  const photoCounts = await db
+    .select({
+      galleryEntryId: schema.galleryPhotos.galleryEntryId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(schema.galleryPhotos)
+    .where(
+      inArray(
+        schema.galleryPhotos.galleryEntryId,
+        entries.map((entry) => entry.id)
+      )
+    )
+    .groupBy(schema.galleryPhotos.galleryEntryId)
+
+  const photoCountMap = new Map<string, number>()
+  for (const row of photoCounts) {
+    photoCountMap.set(row.galleryEntryId, row.count)
+  }
+
+  const coverPaths = Array.from(new Set(entries.map((entry) => entry.storagePath)))
+  const signedUrlMap = new Map<string, string | null>()
+  await Promise.all(
+    coverPaths.map(async (path) => {
+      try {
+        const url = await createSignedStorageUrl(path)
+        signedUrlMap.set(path, url)
+      } catch {
+        signedUrlMap.set(path, null)
+      }
+    })
+  )
+
+  return entries.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    eventDate: entry.eventDate,
+    eventDateLabel: formatGalleryDate(entry.eventDate),
+    eventDateValue: entry.eventDate.toISOString().slice(0, 10),
+    coverImageUrl: signedUrlMap.get(entry.storagePath) ?? null,
+    photoCount: photoCountMap.get(entry.id) ?? 0,
+    status: entry.status ?? "approved",
+  }))
 }
 
 function formatGalleryDate(date: Date) {

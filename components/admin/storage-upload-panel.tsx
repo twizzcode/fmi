@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ImageUpIcon, LoaderCircleIcon } from "lucide-react"
 
@@ -20,7 +20,7 @@ export function StorageUploadPanel({
   const formRef = useRef<HTMLFormElement>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [isUploading, setIsUploading] = useState(false)
 
   async function handleSubmit(formData: FormData) {
     setMessage(null)
@@ -36,7 +36,9 @@ export function StorageUploadPanel({
     const body = new FormData()
     body.set("file", file)
 
-    startTransition(async () => {
+    setIsUploading(true)
+
+    try {
       const response = await fetch("/api/admin/storage/upload", {
         method: "POST",
         body,
@@ -54,7 +56,11 @@ export function StorageUploadPanel({
       setMessage(payload?.message ?? "File berhasil diunggah.")
       formRef.current?.reset()
       router.refresh()
-    })
+    } catch {
+      setError("Upload gagal diproses.")
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -83,14 +89,14 @@ export function StorageUploadPanel({
           name="file"
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif"
-          disabled={disabled || isPending}
+          disabled={disabled || isUploading}
         />
         <Button
           type="submit"
           className="h-10 bg-[#3f679c] px-4 text-white hover:bg-[#355887]"
-          disabled={disabled || isPending}
+          disabled={disabled || isUploading}
         >
-          {isPending ? (
+          {isUploading ? (
             <>
               <LoaderCircleIcon className="size-4 animate-spin" />
               Mengunggah

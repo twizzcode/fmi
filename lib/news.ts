@@ -148,7 +148,7 @@ export async function getPaginatedAdminNewsArticles({
   pageSize: number
   userId?: string
   status?: NewsStatus | "all"
-}) {
+}): Promise<{ totalCount: number; items: NewsArticle[] }> {
   const currentPage = Math.max(1, page)
   const offset = (currentPage - 1) * pageSize
   const whereClause =
@@ -167,7 +167,17 @@ export async function getPaginatedAdminNewsArticles({
       .where(whereClause),
     db
       .select({
-        article: schema.newsArticles,
+        id: schema.newsArticles.id,
+        slug: schema.newsArticles.slug,
+        title: schema.newsArticles.title,
+        excerpt: schema.newsArticles.excerpt,
+        category: schema.newsArticles.category,
+        author: schema.newsArticles.author,
+        imagePath: schema.newsArticles.imagePath,
+        status: schema.newsArticles.status,
+        views: schema.newsArticles.views,
+        publishedAt: schema.newsArticles.publishedAt,
+        userId: schema.newsArticles.userId,
         authorName: schema.users.name,
         authorRole: schema.users.role,
         authorImage: schema.users.image,
@@ -183,7 +193,7 @@ export async function getPaginatedAdminNewsArticles({
 
   return {
     totalCount: countResult[0]?.count ?? 0,
-    items: await Promise.all(items.map(mapDbNewsArticle)),
+    items: await Promise.all(items.map(mapDbNewsArticleMinimal)),
   }
 }
 
@@ -287,6 +297,71 @@ async function mapDbNewsArticle({
     publishedAt: article.publishedAt,
     date: formatDate(article.publishedAt),
     dateISO: article.publishedAt.toISOString().slice(0, 10),
+  }
+}
+
+async function mapDbNewsArticleMinimal({
+  id,
+  slug,
+  title,
+  excerpt,
+  category,
+  author,
+  imagePath,
+  status,
+  views,
+  publishedAt,
+  authorName,
+  authorRole,
+  authorImage,
+  authorUploadedImagePath,
+}: {
+  id: string
+  slug: string
+  title: string
+  excerpt: string
+  category: string
+  author: string
+  imagePath: string
+  status: (typeof schema.newsArticles.$inferSelect)["status"]
+  views: number
+  publishedAt: Date
+  userId: string | null
+  authorName: string | null
+  authorRole: (typeof schema.users.$inferSelect)["role"] | null
+  authorImage: string | null
+  authorUploadedImagePath: string | null
+}): Promise<NewsArticle> {
+  let imageUrl = imagePath
+
+  try {
+    imageUrl = await createSignedStorageUrl(imagePath)
+  } catch {
+    imageUrl = imagePath
+  }
+
+  const authorImageUrl = await resolveUserImage({
+    image: authorImage,
+    uploadedImagePath: authorUploadedImagePath,
+  })
+
+  return {
+    id,
+    slug,
+    title,
+    excerpt,
+    category,
+    author: authorName?.trim() || author,
+    authorRole: getAuthorRoleLabel(authorRole),
+    authorImageUrl,
+    imagePath,
+    imageUrl,
+    bodyJson: "",
+    status,
+    views,
+    publishedAt,
+    date: formatDate(publishedAt),
+    dateISO: publishedAt.toISOString().slice(0, 10),
   }
 }
 

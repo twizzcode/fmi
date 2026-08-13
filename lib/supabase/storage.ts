@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import sharp from "sharp"
+import { cache } from "react"
 
 import { supabaseStorageBucket } from "@/lib/supabase/config"
 import { createSupabaseAdminClient } from "@/lib/supabase/server"
@@ -85,7 +86,7 @@ export async function uploadImageToStorage({
   return objectPath
 }
 
-export async function createSignedStorageUrl(path: string, expiresIn = 3600) {
+export const createSignedStorageUrl = cache(async (path: string, expiresIn = 3600) => {
   if (!isStorageObjectPath(path)) {
     return path
   }
@@ -100,7 +101,7 @@ export async function createSignedStorageUrl(path: string, expiresIn = 3600) {
   }
 
   return data.signedUrl
-}
+})
 
 export async function deleteStorageObject(path: string) {
   await deleteStorageObjects([path])

@@ -3,8 +3,8 @@ import { Suspense } from "react"
 import { DashboardAnalyticsChart } from "@/components/admin/dashboard-analytics-chart"
 import { Skeleton } from "@/components/ui/skeleton"
 import { db, schema } from "@/lib/db"
-import { gte, sql } from "drizzle-orm"
-import { BriefcaseBusiness, Eye, Images, Newspaper, Users2 } from "lucide-react"
+import { sql } from "drizzle-orm"
+import { BriefcaseBusiness, Images, Newspaper, Users2 } from "lucide-react"
 
 function formatCount(value: number) {
   return value.toLocaleString("id-ID")
@@ -43,35 +43,27 @@ export default function DashboardPage() {
         <DashboardMetricsSection />
       </Suspense>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <section className="grid gap-4 xl:grid-cols-1">
         <Suspense fallback={<DashboardChartSkeleton />}>
-          <DashboardGrowthSection />
-        </Suspense>
-        <Suspense fallback={<DashboardViewsSkeleton />}>
-          <DashboardViewsSection />
+          <DashboardGrowthChart />
         </Suspense>
       </section>
-
-      <Suspense fallback={<DashboardNewsTableSkeleton />}>
-        <DashboardLatestNewsSection />
-      </Suspense>
     </div>
   )
 }
 
 async function DashboardMetricsSection() {
-  const [userCountResult, galleryCountResult, memberCountResult, newsCountResult] =
-    await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(schema.users),
-      db.select({ count: sql<number>`count(*)::int` }).from(schema.galleryEntries),
-      db.select({ count: sql<number>`count(*)::int` }).from(schema.structureMembers),
-      db.select({ count: sql<number>`count(*)::int` }).from(schema.newsArticles),
-    ])
+  const [metricsResult] = await db.select({
+    users: sql<number>`(SELECT count(*)::int FROM ${schema.users})`,
+    galleries: sql<number>`(SELECT count(*)::int FROM ${schema.galleryEntries})`,
+    members: sql<number>`(SELECT count(*)::int FROM ${schema.structureMembers})`,
+    news: sql<number>`(SELECT count(*)::int FROM ${schema.newsArticles})`,
+  }).from(sql`(SELECT 1) AS dummy`)
 
-  const totalUsers = userCountResult[0]?.count ?? 0
-  const totalGalleries = galleryCountResult[0]?.count ?? 0
-  const totalMembers = memberCountResult[0]?.count ?? 0
-  const totalNews = newsCountResult[0]?.count ?? 0
+  const totalUsers = metricsResult?.users ?? 0
+  const totalGalleries = metricsResult?.galleries ?? 0
+  const totalMembers = metricsResult?.members ?? 0
+  const totalNews = metricsResult?.news ?? 0
 
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -83,26 +75,25 @@ async function DashboardMetricsSection() {
   )
 }
 
-async function DashboardGrowthSection() {
+async function DashboardGrowthChart() {
   const now = new Date()
   const todayStart = startOfDay(now)
   const last30DaysStart = subtractDays(todayStart, 29)
   const previous30DaysStart = subtractDays(last30DaysStart, 30)
-  const recentNewsRows: Array<{ createdAt: Date }> = []
 
   const [recentGalleryRows, recentMemberRows, userGrowthRows] = await Promise.all([
     db
       .select({ createdAt: schema.galleryEntries.createdAt })
       .from(schema.galleryEntries)
-      .where(gte(schema.galleryEntries.createdAt, previous30DaysStart)),
+      .where(sql`${schema.galleryEntries.createdAt} >= ${previous30DaysStart.toISOString()}`),
     db
       .select({ createdAt: schema.structureMembers.createdAt })
       .from(schema.structureMembers)
-      .where(gte(schema.structureMembers.createdAt, previous30DaysStart)),
+      .where(sql`${schema.structureMembers.createdAt} >= ${previous30DaysStart.toISOString()}`),
     db
       .select({ createdAt: schema.users.createdAt })
       .from(schema.users)
-      .where(gte(schema.users.createdAt, previous30DaysStart)),
+      .where(sql`${schema.users.createdAt} >= ${previous30DaysStart.toISOString()}`),
   ])
 
   const chartLabels = Array.from({ length: 4 }, (_, index) => {
@@ -125,10 +116,26 @@ async function DashboardGrowthSection() {
     news: 0,
   }))
 
-  incrementChartBucket(chartData, chartLabels, recentNewsRows, "news")
-  incrementChartBucket(chartData, chartLabels, recentGalleryRows, "galleries")
-  incrementChartBucket(chartData, chartLabels, recentMemberRows, "members")
-  incrementChartBucket(chartData, chartLabels, userGrowthRows, "users")
+  for (const row of recentGalleryRows) {
+    const index = chartLabels.findIndex(
+      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
+    )
+    if (index >= 0) chartData[index].galleries += 1
+  }
+
+  for (const row of recentMemberRows) {
+    const index = chartLabels.findIndex(
+      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
+    )
+    if (index >= 0) chartData[index].members += 1
+  }
+
+  for (const row of userGrowthRows) {
+    const index = chartLabels.findIndex(
+      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
+    )
+    if (index >= 0) chartData[index].users += 1
+  }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -143,127 +150,6 @@ async function DashboardGrowthSection() {
       </div>
     </div>
   )
-}
-
-async function DashboardViewsSection() {
-  const emptyViewStats = [
-    {
-      totalViews: 0,
-      viewsToday: 0,
-      viewsLast30Days: 0,
-      viewsPrevious30Days: 0,
-    },
-  ]
-  const viewStatsResult = emptyViewStats
-  const totalViews = viewStatsResult[0]?.totalViews ?? 0
-  const viewsToday = viewStatsResult[0]?.viewsToday ?? 0
-  const viewsLast30Days = viewStatsResult[0]?.viewsLast30Days ?? 0
-  const viewsPrevious30Days = viewStatsResult[0]?.viewsPrevious30Days ?? 0
-  const viewTrend = viewsLast30Days - viewsPrevious30Days
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#dce8f6] text-[#27466f]">
-          <Eye className="size-5" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Pembacaan Berita</h2>
-          <p className="text-sm text-slate-500">Dilihat dari total nilai views berita tersimpan.</p>
-        </div>
-      </div>
-      <div className="mt-6 space-y-4">
-        <InsightBox label="Total Dibaca" value={formatCount(totalViews)} tone="text-slate-900" />
-        <InsightBox label="Dibaca Hari Ini" value={formatCount(viewsToday)} tone="text-[#3f679c]" />
-        <InsightBox
-          label="Dibaca 30 Hari Terakhir"
-          value={formatCount(viewsLast30Days)}
-          tone="text-[#45658f]"
-          helper={
-            viewTrend >= 0
-              ? `Naik ${formatCount(viewTrend)} dari 30 hari sebelumnya`
-              : `Turun ${formatCount(Math.abs(viewTrend))} dari 30 hari sebelumnya`
-          }
-        />
-      </div>
-    </div>
-  )
-}
-
-async function DashboardLatestNewsSection() {
-  const latestNews: Array<{
-    id: string
-    title: string
-    views: number
-    publishedAt: Date
-    status: string
-  }> = []
-
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-slate-900">Berita Terbaru</h2>
-        <p className="text-sm leading-6 text-slate-500">
-          Monitor publikasi terbaru dan jumlah pembacaan tiap artikel.
-        </p>
-      </div>
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 bg-white text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Judul</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-700">Tanggal</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-700">Views</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {latestNews.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{item.title}</td>
-                  <td className="px-4 py-3 text-slate-600 capitalize">{item.status}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {item.publishedAt.toLocaleDateString("id-ID", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-600">
-                    {formatCount(item.views)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function incrementChartBucket(
-  chartData: Array<{
-    label: string
-    users: number
-    galleries: number
-    members: number
-    news: number
-  }>,
-  chartLabels: Array<{ start: Date; end: Date }>,
-  rows: Array<{ createdAt: Date }>,
-  key: "users" | "galleries" | "members" | "news"
-) {
-  for (const row of rows) {
-    const index = chartLabels.findIndex(
-      (slot) => row.createdAt >= slot.start && row.createdAt < slot.end
-    )
-
-    if (index >= 0) {
-      chartData[index][key] += 1
-    }
-  }
 }
 
 function MetricCard({
@@ -286,26 +172,6 @@ function MetricCard({
           {icon}
         </div>
       </div>
-    </div>
-  )
-}
-
-function InsightBox({
-  label,
-  value,
-  tone,
-  helper,
-}: {
-  label: string
-  value: string
-  tone: string
-  helper?: string
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className={`mt-2 text-3xl font-bold tracking-tight ${tone}`}>{value}</p>
-      {helper ? <p className="mt-2 text-sm leading-6 text-slate-500">{helper}</p> : null}
     </div>
   )
 }
@@ -335,47 +201,5 @@ function DashboardChartSkeleton() {
       <Skeleton className="mt-3 h-4 w-full max-w-lg rounded-full bg-slate-200" />
       <Skeleton className="mt-6 h-72 w-full rounded-2xl bg-slate-200" />
     </div>
-  )
-}
-
-function DashboardViewsSkeleton() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-11 w-11 rounded-full bg-slate-200" />
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-36 rounded-full bg-slate-200" />
-          <Skeleton className="h-4 w-52 rounded-full bg-slate-200" />
-        </div>
-      </div>
-      <div className="mt-6 space-y-4">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-slate-200 p-4">
-            <Skeleton className="h-3 w-28 rounded-full bg-slate-200" />
-            <Skeleton className="mt-3 h-7 w-24 rounded-xl bg-slate-200" />
-            <Skeleton className="mt-3 h-4 w-40 rounded-full bg-slate-200" />
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function DashboardNewsTableSkeleton() {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <Skeleton className="h-6 w-40 rounded-xl bg-slate-200" />
-      <Skeleton className="mt-3 h-4 w-full max-w-lg rounded-full bg-slate-200" />
-      <div className="mt-6 space-y-3">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="grid grid-cols-[minmax(0,1fr)_6rem_7rem_5rem] gap-3 rounded-xl border border-slate-200 p-4">
-            <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
-            <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
-            <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
-            <Skeleton className="h-4 w-full rounded-full bg-slate-200" />
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }

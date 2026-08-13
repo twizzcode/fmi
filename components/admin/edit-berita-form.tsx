@@ -8,7 +8,7 @@ import { ArrowLeftIcon, ImageUpIcon } from "lucide-react"
 import Link from "next/link"
 
 import { updateNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/workspace/berita/actions"
-import { RichTextEditor } from "@/components/editor/rich-text-editor"
+import { RichTextEditorLazy } from "@/components/admin/rich-text-editor-lazy"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -242,11 +242,11 @@ export function EditBeritaForm({ newsItem }: { newsItem: NewsArticle }) {
           </div>
 
           <Field label="Isi Inti Berita">
-            <RichTextEditor
-              name="bodyJson"
-              initialValue={newsItem.bodyJson}
-              placeholder="Tulis isi inti berita..."
-            />
+              <RichTextEditorLazy
+                name="bodyJson"
+                defaultValue={newsItem.bodyJson}
+                placeholder="Tulis isi lengkap berita..."
+              />
           </Field>
 
           {state.error ? (

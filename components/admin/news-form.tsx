@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from "react"
 import { useFormStatus } from "react-dom"
 
 import { createNewsArticleAction, type NewsActionState } from "@/app/(admin)/admin-space/workspace/berita/actions"
-import { RichTextEditor } from "@/components/editor/rich-text-editor"
+import { RichTextEditorLazy } from "@/components/admin/rich-text-editor-lazy"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -88,7 +88,7 @@ export function NewsForm() {
 
       <div className="mt-4">
         <Field label="Isi Inti Berita">
-          <RichTextEditor
+          <RichTextEditorLazy
             key={state.success ?? "news-form"}
             name="bodyJson"
             placeholder="Tulis isi inti berita..."

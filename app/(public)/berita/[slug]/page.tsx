@@ -180,13 +180,13 @@ export default async function NewsDetailPage(
                 <BlurFade key={item.slug} inView delay={0.05 + index * 0.05}>
                   <Link href={`/berita/${item.slug}`} className="group block border-b border-slate-200 pb-6 last:border-b-0 last:pb-0">
                     <article className="flex flex-col">
-                      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[1.5rem] bg-slate-100">
+                      <div className="relative aspect-video overflow-hidden rounded-[1.5rem] bg-slate-100">
                         <Image
                           src={item.imageUrl}
                           alt={item.title}
-                          width={140}
-                          height={140}
-                          className="h-auto w-24 object-contain transition duration-300 group-hover:scale-105"
+                          fill
+                          sizes="(min-width: 1280px) 300px, (min-width: 768px) 400px, 100vw"
+                          className="object-cover transition duration-300 group-hover:scale-105"
                         />
                       </div>
 
