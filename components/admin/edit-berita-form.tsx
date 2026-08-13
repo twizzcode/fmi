@@ -244,7 +244,7 @@ export function EditBeritaForm({ newsItem }: { newsItem: NewsArticle }) {
           <Field label="Isi Inti Berita">
               <RichTextEditorLazy
                 name="bodyJson"
-                defaultValue={newsItem.bodyJson}
+                initialValue={newsItem.bodyJson}
                 placeholder="Tulis isi lengkap berita..."
               />
           </Field>

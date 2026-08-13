@@ -179,12 +179,12 @@ function normalizeStructurePayload(payload: unknown[]): StructurePayload[] {
   }))
 }
 
-async function uploadBatch<T>(
+async function uploadBatch<T, R>(
   items: T[],
   batchSize: number,
-  uploadFn: (item: T) => Promise<T>
-): Promise<T[]> {
-  const results: T[] = []
+  uploadFn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = []
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize)
     results.push(...(await Promise.all(batch.map(uploadFn))))
@@ -214,8 +214,9 @@ async function uploadStructureAssets({
     }
 
     const sections = await Promise.all(
-      cabinet.sections.map(async (section) => {
-        const allMembers = section.members.map(async (member) => {
+      cabinet.sections.map(async (section) => ({
+        ...section,
+        members: await uploadBatch(section.members, 5, async (member) => {
           let photoPath = member.photoPath
           const photoFile = formData.get(`member-photo:${member.id}`)
 
@@ -231,13 +232,8 @@ async function uploadStructureAssets({
             ...member,
             photoPath,
           }
-        })
-
-        return {
-          ...section,
-          members: await uploadBatch(allMembers, 5, (promise) => promise),
-        }
-      })
+        }),
+      }))
     )
 
     return {
