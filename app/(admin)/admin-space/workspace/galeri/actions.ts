@@ -184,14 +184,20 @@ export async function updateGalleryEntryAction(
         sortOrder: index,
       }))
 
-      await Promise.all(
-        normalizedRetained.map((photo) =>
-          tx
-            .update(schema.galleryPhotos)
-            .set({ sortOrder: photo.sortOrder })
-            .where(eq(schema.galleryPhotos.id, photo.id))
-        )
+      const photosToUpdate = normalizedRetained.filter(
+        (photo, index) => photo.sortOrder !== retainedPhotos[index].sortOrder
       )
+
+      if (photosToUpdate.length > 0) {
+        await Promise.all(
+          photosToUpdate.map((photo) =>
+            tx
+              .update(schema.galleryPhotos)
+              .set({ sortOrder: photo.sortOrder })
+              .where(eq(schema.galleryPhotos.id, photo.id))
+          )
+        )
+      }
 
       if (uploadedPaths.length > 0) {
         await tx.insert(schema.galleryPhotos).values(
@@ -221,9 +227,11 @@ export async function updateGalleryEntryAction(
       .filter((photo) => removedPhotoIds.includes(photo.id))
       .map((photo) => photo.storagePath)
 
-    await Promise.all(
-      removedPaths.map((path) => deleteStorageObject(path).catch(() => undefined))
-    )
+    if (removedPaths.length > 0) {
+      Promise.allSettled(
+        removedPaths.map((path) => deleteStorageObject(path))
+      ).catch(() => undefined)
+    }
 
     revalidateGalleryPaths()
 
@@ -404,5 +412,4 @@ function parseUploadedGalleryImage(value: FormDataEntryValue) {
 function revalidateGalleryPaths() {
   revalidatePath("/workspace/galeri")
   revalidatePath("/galeri-fmiunnes")
-  revalidatePath("/")
 }
