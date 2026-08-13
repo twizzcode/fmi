@@ -123,13 +123,13 @@ async function AdminGalleryTable({
                   <TableCell>
                     <div className="relative h-12 w-20 overflow-hidden rounded-lg bg-slate-100">
                       {item.coverImageUrl ? (
-                        <Image
-                          src={item.coverImageUrl}
-                          alt={item.title}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                        />
+                          <Image
+                            src={item.coverImageUrl}
+                            alt={item.title}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                          />
                       ) : (
                         <div className="flex h-full items-center justify-center text-xs text-slate-400">
                           N/A

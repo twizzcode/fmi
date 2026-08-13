@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { CheckIcon } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import { NewsFilterTabs } from "@/components/admin/news-filter-tabs"
 import {
@@ -31,16 +32,12 @@ export default async function AdminBeritaManagementPage({
   })
   const totalPages = Math.ceil(totalCount / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const paginatedItems =
-    safeCurrentPage === currentPage
-      ? items
-      : (
-          await getPaginatedAdminNewsArticles({
-            page: safeCurrentPage,
-            pageSize: itemsPerPage,
-            status: currentTab,
-          })
-        ).items
+  
+  if (safeCurrentPage !== currentPage) {
+    redirect(`/admin/berita?tab=${currentTab}&page=${safeCurrentPage}`)
+  }
+  
+  const paginatedItems = items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -105,7 +102,7 @@ function NewsTable({ items }: { items: NewsArticle[] }) {
                         src={item.imageUrl}
                         alt={item.title}
                         fill
-                        unoptimized
+                        sizes="80px"
                         className="object-cover"
                       />
                     ) : (

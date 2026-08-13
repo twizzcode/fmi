@@ -80,16 +80,12 @@ async function AdminTestimonialTable({
   })
   const totalPages = Math.ceil(totalCount / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const paginatedTestimonials =
-    safeCurrentPage === currentPage
-      ? testimonials
-      : (
-          await getPaginatedTestimonialsWithImageUrls({
-            page: safeCurrentPage,
-            pageSize: itemsPerPage,
-            userId,
-          })
-        ).items
+  
+  if (safeCurrentPage !== currentPage) {
+    redirect(`/workspace/testimoni?page=${safeCurrentPage}`)
+  }
+  
+  const paginatedTestimonials = testimonials
 
   return (
     <>
@@ -127,7 +123,7 @@ async function AdminTestimonialTable({
                           src={item.imageUrl}
                           alt={item.name}
                           fill
-                          unoptimized
+                          sizes="48px"
                           className="object-cover"
                         />
                       ) : (

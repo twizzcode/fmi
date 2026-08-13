@@ -31,13 +31,20 @@ export function UpdateProfileForm({ user }: { user: User }) {
     const file = e.target.files?.[0]
     if (file) {
       setImageFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string)
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
       }
-      reader.readAsDataURL(file)
+      setPreviewUrl(URL.createObjectURL(file))
     }
   }
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   const handleResetUploadedImage = async () => {
     setIsResettingImage(true)

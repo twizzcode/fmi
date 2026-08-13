@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { CheckIcon, XIcon } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import { TestimonialFilterTabs } from "@/components/admin/testimonial-filter-tabs"
 import { AdminPagination } from "@/components/admin/admin-pagination"
@@ -34,16 +35,12 @@ export default async function AdminTestimoniManagementPage({
   })
   const totalPages = Math.ceil(totalCount / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const paginatedTestimonials =
-    safeCurrentPage === currentPage
-      ? testimonials
-      : (
-          await getPaginatedTestimonialsWithImageUrls({
-            page: safeCurrentPage,
-            pageSize: itemsPerPage,
-            status: currentTab,
-          })
-        ).items
+  
+  if (safeCurrentPage !== currentPage) {
+    redirect(`/admin/testimoni?tab=${currentTab}&page=${safeCurrentPage}`)
+  }
+  
+  const paginatedTestimonials = testimonials
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -108,7 +105,7 @@ function TestimonialTable({ testimonials }: { testimonials: TestimonialView[] })
                         src={item.imageUrl}
                         alt={item.name}
                         fill
-                        unoptimized
+                        sizes="48px"
                         className="object-cover"
                       />
                     ) : (

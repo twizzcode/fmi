@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { CheckIcon, XIcon } from "lucide-react"
+import { redirect } from "next/navigation"
 
 import { GalleryFilterTabs } from "@/components/admin/gallery-filter-tabs"
 import { AdminPagination } from "@/components/admin/admin-pagination"
@@ -31,19 +32,16 @@ export default async function AdminGaleriManagementPage({
     page: currentPage,
     pageSize: itemsPerPage,
     status: currentTab,
+    minimal: true,
   })
   const totalPages = Math.ceil(totalCount / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const paginatedItems =
-    safeCurrentPage === currentPage
-      ? items
-      : (
-          await getPaginatedGalleryActivities({
-            page: safeCurrentPage,
-            pageSize: itemsPerPage,
-            status: currentTab,
-          })
-        ).items
+  
+  if (safeCurrentPage !== currentPage) {
+    redirect(`/admin/galeri?tab=${currentTab}&page=${safeCurrentPage}`)
+  }
+  
+  const paginatedItems = items
 
   return (
     <div className="flex flex-1 flex-col gap-6 bg-slate-50 p-4 md:p-6">
@@ -106,7 +104,7 @@ function GalleryTable({ items }: { items: GalleryActivity[] }) {
                         src={item.coverImageUrl}
                         alt={item.title}
                         fill
-                        unoptimized
+                        sizes="80px"
                         className="object-cover"
                       />
                     ) : (

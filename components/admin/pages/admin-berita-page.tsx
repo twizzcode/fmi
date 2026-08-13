@@ -77,16 +77,12 @@ async function AdminNewsTable({
   })
   const totalPages = Math.ceil(totalCount / itemsPerPage)
   const safeCurrentPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1
-  const paginatedItems =
-    safeCurrentPage === currentPage
-      ? items
-      : (
-          await getPaginatedAdminNewsArticles({
-            page: safeCurrentPage,
-            pageSize: itemsPerPage,
-            userId,
-          })
-        ).items
+  
+  if (safeCurrentPage !== currentPage) {
+    redirect(`/workspace/berita?page=${safeCurrentPage}`)
+  }
+  
+  const paginatedItems = items
 
   return (
     <>
@@ -124,7 +120,7 @@ async function AdminNewsTable({
                           src={item.imageUrl}
                           alt={item.title}
                           fill
-                          unoptimized
+                          sizes="80px"
                           className="object-cover"
                         />
                       ) : (
