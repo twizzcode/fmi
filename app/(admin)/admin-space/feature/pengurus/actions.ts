@@ -179,6 +179,19 @@ function normalizeStructurePayload(payload: unknown[]): StructurePayload[] {
   }))
 }
 
+async function uploadBatch<T>(
+  items: T[],
+  batchSize: number,
+  uploadFn: (item: T) => Promise<T>
+): Promise<T[]> {
+  const results: T[] = []
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    results.push(...(await Promise.all(batch.map(uploadFn))))
+  }
+  return results
+}
+
 async function uploadStructureAssets({
   cabinets,
   formData,
@@ -188,51 +201,51 @@ async function uploadStructureAssets({
   formData: FormData
   uploadedPaths: string[]
 }) {
-  return Promise.all(
-    cabinets.map(async (cabinet) => {
-      let logoPath = cabinet.logoPath
-      const logoFile = formData.get(`cabinet-logo:${cabinet.id}`)
+  return uploadBatch(cabinets, 5, async (cabinet) => {
+    let logoPath = cabinet.logoPath
+    const logoFile = formData.get(`cabinet-logo:${cabinet.id}`)
 
-      if (logoFile instanceof File && logoFile.size > 0) {
-        logoPath = await uploadImageToStorage({
-          file: logoFile,
-          folder: "pengurus/kabinet",
-        })
-        uploadedPaths.push(logoPath)
-      }
+    if (logoFile instanceof File && logoFile.size > 0) {
+      logoPath = await uploadImageToStorage({
+        file: logoFile,
+        folder: "pengurus/kabinet",
+      })
+      uploadedPaths.push(logoPath)
+    }
 
-      const sections = await Promise.all(
-        cabinet.sections.map(async (section) => ({
-          ...section,
-          members: await Promise.all(
-            section.members.map(async (member) => {
-              let photoPath = member.photoPath
-              const photoFile = formData.get(`member-photo:${member.id}`)
+    const sections = await Promise.all(
+      cabinet.sections.map(async (section) => {
+        const allMembers = section.members.map(async (member) => {
+          let photoPath = member.photoPath
+          const photoFile = formData.get(`member-photo:${member.id}`)
 
-              if (photoFile instanceof File && photoFile.size > 0) {
-                photoPath = await uploadImageToStorage({
-                  file: photoFile,
-                  folder: "pengurus/anggota",
-                })
-                uploadedPaths.push(photoPath)
-              }
-
-              return {
-                ...member,
-                photoPath,
-              }
+          if (photoFile instanceof File && photoFile.size > 0) {
+            photoPath = await uploadImageToStorage({
+              file: photoFile,
+              folder: "pengurus/anggota",
             })
-          ),
-        }))
-      )
+            uploadedPaths.push(photoPath)
+          }
 
-      return {
-        ...cabinet,
-        logoPath,
-        sections,
-      }
-    })
-  )
+          return {
+            ...member,
+            photoPath,
+          }
+        })
+
+        return {
+          ...section,
+          members: await uploadBatch(allMembers, 5, (promise) => promise),
+        }
+      })
+    )
+
+    return {
+      ...cabinet,
+      logoPath,
+      sections,
+    }
+  })
 }
 
 async function createStructureResponsePayload(cabinets: StructurePayload[]) {

@@ -90,7 +90,7 @@ export async function createNewsArticleAction(
       publishedAt: parsed.publishedAt,
     })
 
-    revalidateNewsPaths(parsed.slug)
+    revalidatePath("/workspace/berita")
 
     return {
       error: null,

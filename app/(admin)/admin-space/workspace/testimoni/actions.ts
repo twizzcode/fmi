@@ -82,9 +82,7 @@ export async function createTestimonialAction(
       imagePath,
     })
 
-    revalidatePath("/admin-space/testimoni")
     revalidatePath("/workspace/testimoni")
-    revalidatePath("/")
 
     return {
       error: null,
@@ -178,9 +176,7 @@ export async function updateTestimonialAction(
       await deleteStorageObject(existing.imagePath).catch(() => undefined)
     }
 
-    revalidatePath("/admin-space/testimoni")
     revalidatePath("/workspace/testimoni")
-    revalidatePath("/")
 
     return {
       error: null,
@@ -224,16 +220,14 @@ export async function deleteTestimonialAction(
 
   try {
     if (existing.imagePath) {
-      await deleteStorageObject(existing.imagePath)
+      await deleteStorageObject(existing.imagePath).catch(() => undefined)
     }
 
     await db
       .delete(schema.testimonials)
       .where(eq(schema.testimonials.id, existing.id))
 
-    revalidatePath("/admin-space/testimoni")
     revalidatePath("/workspace/testimoni")
-    revalidatePath("/")
 
     return {
       error: null,

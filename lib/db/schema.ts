@@ -155,6 +155,7 @@ export const newsArticles = pgTable(
     index("news_article_published_at_idx").on(table.publishedAt),
     index("news_article_slug_idx").on(table.slug),
     index("news_article_user_id_idx").on(table.userId),
+    index("news_article_status_idx").on(table.status),
   ]
 )
 

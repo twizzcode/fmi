@@ -1,0 +1,1 @@
+CREATE INDEX "news_article_status_idx" ON "news_article" USING btree ("status");

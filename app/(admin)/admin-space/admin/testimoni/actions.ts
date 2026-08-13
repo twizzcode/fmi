@@ -35,9 +35,7 @@ export async function approveTestimonialAction(
       .set({ status: "approved" })
       .where(eq(schema.testimonials.id, id.trim()))
 
-    revalidatePath("/admin-space/admin/testimoni")
-    revalidatePath("/admin-space/testimoni")
-    revalidatePath("/testimoni")
+    revalidatePath("/admin/testimoni")
     revalidatePath("/")
 
     return {
@@ -76,10 +74,7 @@ export async function rejectTestimonialAction(
       .set({ status: "rejected" })
       .where(eq(schema.testimonials.id, id.trim()))
 
-    revalidatePath("/admin-space/admin/testimoni")
-    revalidatePath("/admin-space/testimoni")
-    revalidatePath("/testimoni")
-    revalidatePath("/")
+    revalidatePath("/admin/testimoni")
 
     return {
       error: null,

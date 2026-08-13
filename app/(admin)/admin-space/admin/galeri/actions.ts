@@ -35,9 +35,8 @@ export async function approveGalleryAction(
       .set({ status: "approved" })
       .where(eq(schema.galleryEntries.id, id.trim()))
 
-    revalidatePath("/admin-space/admin/galeri")
-    revalidatePath("/admin-space/galeri")
-    revalidatePath("/galeri")
+    revalidatePath("/admin/galeri")
+    revalidatePath("/galeri-fmiunnes")
     revalidatePath("/")
 
     return {
@@ -76,10 +75,7 @@ export async function rejectGalleryAction(
       .set({ status: "rejected" })
       .where(eq(schema.galleryEntries.id, id.trim()))
 
-    revalidatePath("/admin-space/admin/galeri")
-    revalidatePath("/admin-space/galeri")
-    revalidatePath("/galeri")
-    revalidatePath("/")
+    revalidatePath("/admin/galeri")
 
     return {
       error: null,

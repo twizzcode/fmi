@@ -93,7 +93,7 @@ async function requireAdminSession(): Promise<TestimonialApprovalActionState | n
 }
 
 function revalidateTestimonialPaths() {
-  revalidatePath("/admin-space/testimoni")
   revalidatePath("/workspace/testimoni")
+  revalidatePath("/admin/testimoni")
   revalidatePath("/")
 }

@@ -128,8 +128,7 @@ export async function deleteNewsAdminAction(
       .delete(schema.newsArticles)
       .where(eq(schema.newsArticles.id, existing.id))
 
-    revalidatePath("/admin-space/admin/berita")
-    revalidatePath("/admin-space/berita")
+    revalidatePath("/admin/berita")
     revalidatePath("/berita")
     revalidatePath("/")
 
